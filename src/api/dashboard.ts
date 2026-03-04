@@ -43,7 +43,7 @@ export const dashboardApi = {
    */
   getStats: () => {
     return request<DashboardStats>({
-      url: '/api/dashboard/stats',
+      url: '/dashboard/stats',
       method: 'GET',
     })
   },
@@ -54,7 +54,7 @@ export const dashboardApi = {
    */
   getRecentAssessments: (limit: number = 5) => {
     return request<RecentAssessment[]>({
-      url: '/api/dashboard/recent-assessments',
+      url: '/dashboard/recent-assessments',
       method: 'GET',
       params: { limit },
     })
@@ -66,7 +66,7 @@ export const dashboardApi = {
    */
   getRecommendedContent: (limit: number = 6) => {
     return request<RecommendedContent[]>({
-      url: '/api/dashboard/recommendations',
+      url: '/dashboard/recommendations',
       method: 'GET',
       params: { limit },
     })

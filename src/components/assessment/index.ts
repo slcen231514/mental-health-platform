@@ -7,3 +7,5 @@ export type { ScaleCardProps } from './ScaleCard'
 
 export { default as QuestionItem } from './QuestionItem'
 export type { QuestionItemProps } from './QuestionItem'
+
+export { default as ResultChart } from './ResultChart'

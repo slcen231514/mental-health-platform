@@ -1,27 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import {
-  Button,
-  Progress,
-  Result,
-  Space,
-  message,
-  Modal,
-  Typography,
-} from 'antd'
+import { Button, Progress, Result, message, Modal, Typography } from 'antd'
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
   ExclamationCircleOutlined,
 } from '@ant-design/icons'
-import {
-  assessmentApi,
-  type ScaleDetail,
-  type AssessmentResult,
-} from '@/api/assessment'
+import { assessmentApi, type ScaleDetail } from '@/api/assessment'
 import { Loading, QuestionItem } from '@/components'
 
-const { Title, Paragraph } = Typography
+const { Title } = Typography
 
 /**
  * AssessmentDetail 评估问卷页面
@@ -36,7 +24,6 @@ export default function AssessmentDetail() {
   const [submitting, setSubmitting] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<number, number>>({}) // questionNumber -> score
-  const [result, setResult] = useState<AssessmentResult | null>(null)
 
   useEffect(() => {
     if (scaleCode) {
@@ -128,35 +115,15 @@ export default function AssessmentDetail() {
         scaleCode: scale.code,
         answers: answers,
       })
-      setResult(response.data)
       message.success('评估提交成功')
+      // 跳转到结果页面
+      navigate(`/assessment/result/${response.data.id}`)
     } catch (error) {
       console.error('提交评估失败:', error)
       message.error('提交评估失败，请稍后重试')
     } finally {
       setSubmitting(false)
     }
-  }
-
-  /**
-   * 获取严重程度颜色
-   */
-  const getSeverityColor = (severity: string): string => {
-    const lowerSeverity = severity?.toLowerCase() || ''
-    if (
-      lowerSeverity.includes('无') ||
-      lowerSeverity.includes('正常') ||
-      lowerSeverity.includes('minimal')
-    ) {
-      return '#52c41a'
-    }
-    if (lowerSeverity.includes('轻') || lowerSeverity.includes('mild')) {
-      return '#1890ff'
-    }
-    if (lowerSeverity.includes('中') || lowerSeverity.includes('moderate')) {
-      return '#faad14'
-    }
-    return '#ff4d4f'
   }
 
   // 加载中
@@ -185,51 +152,6 @@ export default function AssessmentDetail() {
   const progress = Math.round(((currentIndex + 1) / questions.length) * 100)
   const isLastQuestion = currentIndex === questions.length - 1
   const isAnswered = answers[currentQuestion.questionNumber] !== undefined
-
-  // 显示结果页面
-  if (result) {
-    const severityColor = getSeverityColor(result.severity)
-    return (
-      <div className="max-w-3xl mx-auto">
-        <Result
-          status="success"
-          title="评估完成"
-          subTitle={`您的${scale.name}评估已完成`}
-        />
-
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="text-center">
-            <Title level={2} style={{ color: severityColor, marginBottom: 8 }}>
-              {result.totalScore} 分
-            </Title>
-            <Title level={4} style={{ color: severityColor, marginBottom: 24 }}>
-              {result.severity}
-            </Title>
-            {result.interpretation && (
-              <div className="text-left">
-                <Paragraph className="text-gray-600 bg-gray-50 p-4 rounded">
-                  {result.interpretation}
-                </Paragraph>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <Space className="w-full justify-center">
-          <Button size="large" onClick={() => navigate('/assessment')}>
-            返回量表列表
-          </Button>
-          <Button
-            type="primary"
-            size="large"
-            onClick={() => navigate('/intervention')}
-          >
-            查看干预建议
-          </Button>
-        </Space>
-      </div>
-    )
-  }
 
   // 问卷页面
   return (

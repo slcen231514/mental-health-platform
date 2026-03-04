@@ -43,9 +43,10 @@ const Loading: React.FC<LoadingProps> = ({
   if (fullscreen) {
     return (
       <div
-        className={`fixed inset-0 flex items-center justify-center bg-white bg-opacity-80 z-50 ${className}`}
+        className={`fixed inset-0 flex flex-col items-center justify-center bg-white bg-opacity-80 z-50 ${className}`}
       >
-        <Spin spinning={spinning} tip={tip} size="large" {...restProps} />
+        <Spin spinning={spinning} size="large" {...restProps} />
+        {tip && <div className="mt-4 text-gray-600">{tip}</div>}
       </div>
     )
   }
