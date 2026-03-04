@@ -8,13 +8,13 @@
  * @param delay 延迟时间（毫秒）
  * @returns 防抖后的函数
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number = 300
 ): (...args: Parameters<T>) => void {
   let timer: NodeJS.Timeout | null = null
 
-  return function (this: any, ...args: Parameters<T>) {
+  return function (this: unknown, ...args: Parameters<T>) {
     if (timer) {
       clearTimeout(timer)
     }
@@ -32,13 +32,13 @@ export function debounce<T extends (...args: any[]) => any>(
  * @param delay 延迟时间（毫秒）
  * @returns 节流后的函数
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number = 300
 ): (...args: Parameters<T>) => void {
   let lastTime = 0
 
-  return function (this: any, ...args: Parameters<T>) {
+  return function (this: unknown, ...args: Parameters<T>) {
     const now = Date.now()
 
     if (now - lastTime >= delay) {
@@ -59,17 +59,17 @@ export function deepClone<T>(obj: T): T {
   }
 
   if (obj instanceof Date) {
-    return new Date(obj.getTime()) as any
+    return new Date(obj.getTime()) as T
   }
 
   if (obj instanceof Array) {
-    return obj.map((item) => deepClone(item)) as any
+    return obj.map(item => deepClone(item)) as T
   }
 
   if (obj instanceof Object) {
-    const clonedObj: any = {}
+    const clonedObj = {} as T
     for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
         clonedObj[key] = deepClone(obj[key])
       }
     }
@@ -85,7 +85,7 @@ export function deepClone<T>(obj: T): T {
  * @returns 唯一 ID
  */
 export function generateId(prefix: string = 'id'): string {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
 }
 
 /**
@@ -93,7 +93,7 @@ export function generateId(prefix: string = 'id'): string {
  * @returns UUID
  */
 export function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = (Math.random() * 16) | 0
     const v = c === 'x' ? r : (r & 0x3) | 0x8
     return v.toString(16)
@@ -106,7 +106,7 @@ export function generateUUID(): string {
  * @returns Promise
  */
 export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 /**
@@ -121,7 +121,7 @@ export function unique<T>(arr: T[], key?: keyof T): T[] {
   }
 
   const seen = new Set()
-  return arr.filter((item) => {
+  return arr.filter(item => {
     const value = item[key]
     if (seen.has(value)) {
       return false
@@ -138,14 +138,17 @@ export function unique<T>(arr: T[], key?: keyof T): T[] {
  * @returns 分组后的对象
  */
 export function groupBy<T>(arr: T[], key: keyof T): Record<string, T[]> {
-  return arr.reduce((result, item) => {
-    const groupKey = String(item[key])
-    if (!result[groupKey]) {
-      result[groupKey] = []
-    }
-    result[groupKey].push(item)
-    return result
-  }, {} as Record<string, T[]>)
+  return arr.reduce(
+    (result, item) => {
+      const groupKey = String(item[key])
+      if (!result[groupKey]) {
+        result[groupKey] = []
+      }
+      result[groupKey].push(item)
+      return result
+    },
+    {} as Record<string, T[]>
+  )
 }
 
 /**
@@ -167,7 +170,7 @@ export function chunk<T>(arr: T[], size: number): T[][] {
  * @param obj 对象
  * @returns 查询字符串
  */
-export function objectToQueryString(obj: Record<string, any>): string {
+export function objectToQueryString(obj: Record<string, unknown>): string {
   const params = new URLSearchParams()
 
   Object.entries(obj).forEach(([key, value]) => {
@@ -184,7 +187,9 @@ export function objectToQueryString(obj: Record<string, any>): string {
  * @param queryString 查询字符串
  * @returns 对象
  */
-export function queryStringToObject(queryString: string): Record<string, string> {
+export function queryStringToObject(
+  queryString: string
+): Record<string, string> {
   const params = new URLSearchParams(queryString)
   const result: Record<string, string> = {}
 
@@ -227,7 +232,11 @@ export function formatNumber(num: number): string {
  * @param suffix 后缀
  * @returns 截断后的字符串
  */
-export function truncate(str: string, maxLength: number, suffix: string = '...'): string {
+export function truncate(
+  str: string,
+  maxLength: number,
+  suffix: string = '...'
+): string {
   if (str.length <= maxLength) {
     return str
   }
@@ -251,7 +260,7 @@ export function capitalize(str: string): string {
  * @returns 下划线格式的字符串
  */
 export function camelToSnake(str: string): string {
-  return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
+  return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)
 }
 
 /**
@@ -268,7 +277,7 @@ export function snakeToCamel(str: string): string {
  * @param value 值
  * @returns 是否为空
  */
-export function isEmpty(value: any): boolean {
+export function isEmpty(value: unknown): boolean {
   if (value === null || value === undefined) {
     return true
   }
@@ -465,4 +474,28 @@ export default {
   random,
   randomColor,
   shuffle,
+}
+
+/**
+ * 根据当前时间获取问候语
+ * @returns 问候语
+ */
+export function getGreeting(): string {
+  const hour = new Date().getHours()
+
+  if (hour < 6) {
+    return '夜深了'
+  } else if (hour < 9) {
+    return '早上好'
+  } else if (hour < 12) {
+    return '上午好'
+  } else if (hour < 14) {
+    return '中午好'
+  } else if (hour < 18) {
+    return '下午好'
+  } else if (hour < 22) {
+    return '晚上好'
+  } else {
+    return '夜深了'
+  }
 }
