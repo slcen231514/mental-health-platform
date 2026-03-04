@@ -74,7 +74,7 @@ export const assessmentApi = {
   // 获取评估结果详情
   getResult: (assessmentId: number) =>
     request.get<any, { data: AssessmentResult }>(
-      `/assessments/results/${assessmentId}`
+      `/assessments/${assessmentId}`
     ),
 
   // 获取评估报告

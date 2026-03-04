@@ -5,7 +5,6 @@ import {
   Card,
   Space,
   Typography,
-  Divider,
   message,
   Result as AntResult,
 } from 'antd'
@@ -18,7 +17,7 @@ import { assessmentApi, type AssessmentResult } from '@/api/assessment'
 import { Loading, ResultChart } from '@/components'
 import { formatDate } from '@/utils'
 
-const { Title, Paragraph, Text } = Typography
+const { Title, Paragraph } = Typography
 
 /**
  * AssessmentResult 评估结果页面
