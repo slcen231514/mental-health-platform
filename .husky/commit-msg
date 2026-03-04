@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# 提交信息格式验证（可选）
+# 格式: type(scope): subject
+# 例如: feat(auth): add login functionality
+# 类型: feat, fix, docs, style, refactor, test, chore
+
+commit_msg_file=$1
+commit_msg=$(cat "$commit_msg_file")
+
+# 基本长度检查
+if [ ${#commit_msg} -lt 10 ]; then
+  echo "❌ 提交信息太短，至少需要10个字符"
+  exit 1
+fi
+
+echo "✅ 提交信息格式正确"

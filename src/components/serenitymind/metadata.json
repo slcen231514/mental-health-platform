@@ -1,0 +1,8 @@
+{
+  "name": "心语 (SerenityMind) - 您的共情语音伙伴",
+  "description": "一个宁静的心理健康支持聊天机器人，使用 Gemini 2.5 Live API 进行实时共情语音对话和情感支持。",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}

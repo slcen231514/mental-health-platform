@@ -1,0 +1,43 @@
+import request from './request'
+
+export interface Diary {
+  id: number
+  userId: number
+  content: string
+  emotionType: string
+  emotionLevel: number
+  createdAt: string
+}
+
+export interface SleepRecord {
+  id: number
+  userId: number
+  sleepTime: string
+  wakeTime: string
+  quality: number
+  createdAt: string
+}
+
+export const interventionApi = {
+  // 情绪日记
+  saveDiary: (data: { content: string; emotionType: string; emotionLevel: number }) =>
+    request.post<any, { data: Diary }>('/interventions/diary', data),
+  
+  getDiaryHistory: (params?: { page?: number; size?: number }) =>
+    request.get<any, { data: { content: Diary[]; totalElements: number } }>('/interventions/diary', { params }),
+  
+  // 睡眠记录
+  saveSleepRecord: (data: { sleepTime: string; wakeTime: string; quality: number }) =>
+    request.post<any, { data: SleepRecord }>('/interventions/sleep', data),
+  
+  getSleepHistory: (params?: { page?: number; size?: number }) =>
+    request.get<any, { data: { content: SleepRecord[]; totalElements: number } }>('/interventions/sleep', { params }),
+  
+  // CBT练习
+  submitCbtSession: (data: { exerciseType: string; responses: Record<string, string> }) =>
+    request.post('/interventions/cbt', data),
+  
+  // 冥想记录
+  recordMeditation: (data: { type: string; duration: number }) =>
+    request.post('/interventions/meditation', data),
+}
