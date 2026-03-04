@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import {
   notificationApi,
+  NotificationStatus,
   type Notification,
   type GetNotificationsRequest,
 } from '@/api/notification'
@@ -76,8 +77,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       await notificationApi.markAsRead(id)
 
       // 更新本地状态
-      const notifications = get().notifications.map((n) =>
-        n.id === id ? { ...n, status: 'READ' as const } : n
+      const notifications = get().notifications.map(n =>
+        n.id === id ? { ...n, status: NotificationStatus.READ } : n
       )
       const unreadCount = Math.max(0, get().unreadCount - 1)
 
@@ -95,9 +96,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       await notificationApi.markAllAsRead()
 
       // 更新本地状态
-      const notifications = get().notifications.map((n) => ({
+      const notifications = get().notifications.map(n => ({
         ...n,
-        status: 'READ' as const,
+        status: NotificationStatus.READ,
       }))
 
       set({ notifications, unreadCount: 0 })
@@ -114,10 +115,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       await notificationApi.deleteNotification(id)
 
       // 更新本地状态
-      const notification = get().notifications.find((n) => n.id === id)
-      const notifications = get().notifications.filter((n) => n.id !== id)
+      const notification = get().notifications.find(n => n.id === id)
+      const notifications = get().notifications.filter(n => n.id !== id)
       const unreadCount =
-        notification?.status === 'UNREAD'
+        notification?.status === NotificationStatus.UNREAD
           ? Math.max(0, get().unreadCount - 1)
           : get().unreadCount
 
@@ -135,12 +136,12 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   // 设置通知列表
-  setNotifications: (notifications) => {
+  setNotifications: notifications => {
     set({ notifications })
   },
 
   // 设置未读数量
-  setUnreadCount: (count) => {
+  setUnreadCount: count => {
     set({ unreadCount: count })
   },
 
