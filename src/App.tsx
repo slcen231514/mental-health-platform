@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useAuthStore } from './store/authStore'
+import { PrivateRoute } from '@/components'
 import MainLayout from './layouts/MainLayout'
 import AuthLayout from './layouts/AuthLayout'
 import Login from './pages/auth/Login'
@@ -12,11 +12,6 @@ import Intervention from './pages/Intervention'
 import Counselor from './pages/Counselor'
 import Profile from './pages/Profile'
 
-function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />
-}
-
 function App() {
   return (
     <BrowserRouter>
@@ -25,7 +20,13 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
         </Route>
-        <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
+        <Route
+          element={
+            <PrivateRoute>
+              <MainLayout />
+            </PrivateRoute>
+          }
+        >
           <Route path="/" element={<Dashboard />} />
           <Route path="/assessment" element={<Assessment />} />
           <Route path="/assessment/:scaleCode" element={<AssessmentDetail />} />
