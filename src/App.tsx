@@ -15,6 +15,8 @@ import CounselorList from './pages/CounselorList'
 import CounselorDetail from './pages/CounselorDetail'
 import Appointments from './pages/Appointments'
 import Profile from './pages/Profile'
+import Notifications from './pages/Notifications'
+import Settings from './pages/Settings'
 
 function App() {
   return (
@@ -42,6 +44,8 @@ function App() {
           <Route path="/counselor/:id" element={<CounselorDetail />} />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

@@ -14,7 +14,7 @@ interface AuthState {
   // Actions
   login: (data: LoginRequest) => Promise<void>
   logout: () => Promise<void>
-  refreshToken: () => Promise<void>
+  refreshAccessToken: () => Promise<void>
   setAuth: (user: User, accessToken: string, refreshToken: string) => void
   setTokens: (accessToken: string, refreshToken: string) => void
   setUser: (user: User) => void
@@ -84,7 +84,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // 刷新令牌 action
-      refreshToken: async () => {
+      refreshAccessToken: async () => {
         try {
           const currentRefreshToken = get().refreshToken
           if (!currentRefreshToken) {
@@ -130,7 +130,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // 设置用户信息
-      setUser: (user) => {
+      setUser: user => {
         set({ user })
       },
 
@@ -146,7 +146,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage', // localStorage key
-      partialize: (state) => ({
+      partialize: state => ({
         // 只持久化这些字段
         user: state.user,
         accessToken: state.accessToken,

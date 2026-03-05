@@ -22,13 +22,16 @@ export type ValidatorFunction = (value: any) => ValidationResult
  * @returns 验证结果
  */
 export function validatePhone(phone: string): ValidationResult {
-  if (!phone) {
+  if (!phone || phone.trim() === '') {
     return { valid: false, message: '请输入手机号' }
   }
 
   const phoneRegex = /^1[3-9]\d{9}$/
   if (!phoneRegex.test(phone)) {
-    return { valid: false, message: '请输入正确的手机号' }
+    return {
+      valid: false,
+      message: '请输入正确的手机号格式（11位数字，以1开头）',
+    }
   }
 
   return { valid: true }
@@ -262,7 +265,10 @@ export function validateInteger(
  * @param fieldName 字段名称
  * @returns 验证结果
  */
-export function validateRequired(value: any, fieldName: string = '此项'): ValidationResult {
+export function validateRequired(
+  value: any,
+  fieldName: string = '此项'
+): ValidationResult {
   if (value === '' || value === null || value === undefined) {
     return { valid: false, message: `${fieldName}不能为空` }
   }
@@ -364,10 +370,14 @@ export const formRules = {
   }),
 
   /**
-   * 手机号规则
+   * 手机号规则（可选）
    */
   phone: () => ({
     validator: (_: any, value: string) => {
+      // 如果没有输入，则通过验证（可选字段）
+      if (!value || value.trim() === '') {
+        return Promise.resolve()
+      }
       const result = validatePhone(value)
       return result.valid ? Promise.resolve() : Promise.reject(result.message)
     },

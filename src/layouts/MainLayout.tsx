@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Layout, Menu, Avatar, Dropdown, Button } from 'antd'
+import { Layout, Menu, Avatar, Dropdown, Button, Badge } from 'antd'
 import {
   HomeOutlined,
   FormOutlined,
@@ -11,8 +11,11 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  BellOutlined,
+  SettingOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../store/authStore'
+import { useNotificationStore } from '../store/notificationStore'
 
 const { Header, Sider, Content } = Layout
 
@@ -29,6 +32,16 @@ export default function MainLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuthStore()
+  const { unreadCount, fetchUnreadCount } = useNotificationStore()
+
+  // 定期获取未读通知数量
+  useEffect(() => {
+    fetchUnreadCount()
+    const interval = setInterval(() => {
+      fetchUnreadCount()
+    }, 30000) // 每30秒刷新一次
+    return () => clearInterval(interval)
+  }, [fetchUnreadCount])
 
   const handleLogout = () => {
     logout()
@@ -56,6 +69,12 @@ export default function MainLayout() {
       ),
       label: '个人中心',
       onClick: () => navigate('/profile'),
+    },
+    {
+      key: 'settings',
+      icon: <SettingOutlined />,
+      label: '设置',
+      onClick: () => navigate('/settings'),
     },
     {
       key: 'logout',
@@ -96,16 +115,26 @@ export default function MainLayout() {
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             onClick={() => setCollapsed(!collapsed)}
           />
-          <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-            <div className="flex items-center cursor-pointer hover:bg-gray-100 px-3 py-1 rounded">
-              <Avatar
-                icon={<UserOutlined />}
-                src={getAvatarUrl(user?.avatar)}
-                className="bg-primary"
+          <div className="flex items-center gap-4">
+            <Badge count={unreadCount} offset={[-5, 5]}>
+              <Button
+                type="text"
+                icon={<BellOutlined className="text-lg" />}
+                onClick={() => navigate('/notifications')}
+                className="flex items-center justify-center"
               />
-              <span className="ml-2">{user?.username}</span>
-            </div>
-          </Dropdown>
+            </Badge>
+            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+              <div className="flex items-center cursor-pointer hover:bg-gray-100 px-3 py-1 rounded">
+                <Avatar
+                  icon={<UserOutlined />}
+                  src={getAvatarUrl(user?.avatar)}
+                  className="bg-primary"
+                />
+                <span className="ml-2">{user?.username}</span>
+              </div>
+            </Dropdown>
+          </div>
         </Header>
         <Content
           className="m-4 p-6 bg-white rounded-lg overflow-y-auto"
