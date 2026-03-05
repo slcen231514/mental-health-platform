@@ -35,10 +35,25 @@ export default function MainLayout() {
     navigate('/login')
   }
 
+  // 获取完整的头像URL
+  const getAvatarUrl = (avatar?: string) => {
+    if (!avatar) return undefined
+    // 如果已经是完整URL，直接返回
+    if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+      return avatar
+    }
+    // 否则拼接API base URL
+    return `${import.meta.env.VITE_API_BASE_URL}${avatar}`
+  }
+
   const userMenuItems = [
     {
       key: 'profile',
-      icon: <UserOutlined />,
+      icon: user?.avatar ? (
+        <Avatar size={16} src={getAvatarUrl(user.avatar)} />
+      ) : (
+        <UserOutlined />
+      ),
       label: '个人中心',
       onClick: () => navigate('/profile'),
     },
@@ -83,7 +98,11 @@ export default function MainLayout() {
           />
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
             <div className="flex items-center cursor-pointer hover:bg-gray-100 px-3 py-1 rounded">
-              <Avatar icon={<UserOutlined />} className="bg-primary" />
+              <Avatar
+                icon={<UserOutlined />}
+                src={getAvatarUrl(user?.avatar)}
+                className="bg-primary"
+              />
               <span className="ml-2">{user?.username}</span>
             </div>
           </Dropdown>

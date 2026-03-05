@@ -22,7 +22,7 @@ import { useAuthStore } from '@/store/authStore'
 import { userApi } from '@/api/user'
 
 export default function Profile() {
-  const { user } = useAuthStore()
+  const { user, setUser } = useAuthStore()
   const [form] = Form.useForm()
   const [passwordForm] = Form.useForm()
   const [editMode, setEditMode] = useState(false)
@@ -48,9 +48,15 @@ export default function Profile() {
   const handleAvatarUpload = async (file: File) => {
     try {
       setAvatarLoading(true)
-      await userApi.uploadAvatar(file)
+      const response = await userApi.uploadAvatar(file)
+      const avatarUrl = response.data.url
+
+      // 更新用户头像到authStore
+      if (user) {
+        setUser({ ...user, avatar: avatarUrl })
+      }
+
       message.success('头像上传成功')
-      // TODO: 更新用户头像到authStore
     } catch (error: any) {
       message.error(error?.message || '头像上传失败')
     } finally {
@@ -63,14 +69,24 @@ export default function Profile() {
   const handleSaveProfile = async (values: any) => {
     try {
       setUpdateLoading(true)
-      await userApi.updateUserProfile({
+      const response = await userApi.updateUserProfile({
         phone: values.phone,
         gender: values.gender,
         bio: values.bio,
       })
+
+      // 更新用户信息到authStore
+      if (user) {
+        setUser({
+          ...user,
+          phone: values.phone,
+          gender: values.gender,
+          bio: values.bio,
+        })
+      }
+
       message.success('更新成功')
       setEditMode(false)
-      // TODO: 更新用户信息到authStore
     } catch (error: any) {
       message.error(error?.message || '更新失败')
     } finally {
@@ -111,6 +127,17 @@ export default function Profile() {
     )
   }
 
+  // 获取完整的头像URL
+  const getAvatarUrl = (avatar?: string) => {
+    if (!avatar) return undefined
+    // 如果已经是完整URL，直接返回
+    if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+      return avatar
+    }
+    // 否则拼接API base URL
+    return `${import.meta.env.VITE_API_BASE_URL}${avatar}`
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">个人信息</h1>
@@ -122,7 +149,7 @@ export default function Profile() {
             <Avatar
               size={120}
               icon={<UserOutlined />}
-              src={user?.avatar}
+              src={getAvatarUrl(user?.avatar)}
               className="border-4 border-gray-200"
             />
             <Upload
