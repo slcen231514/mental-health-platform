@@ -20,6 +20,25 @@ export interface InterventionPlan {
   createdAt: string
 }
 
+export interface CBTSession {
+  id: number
+  userId: number
+  exerciseType: string
+  status: string
+  currentStep: number
+  stepDescription: string
+  createdAt: string
+  responses?: {
+    situation: string
+    automaticThought: string
+    emotionBefore: string
+    evidence: string
+    cognitiveDistortion: string
+    alternativeThought: string
+    emotionAfter: string
+  }
+}
+
 export interface Diary {
   id: number
   userId: number
@@ -35,6 +54,14 @@ export interface SleepRecord {
   sleepTime: string
   wakeTime: string
   quality: number
+  createdAt: string
+}
+
+export interface MeditationRecord {
+  id: number
+  userId: number
+  type: string
+  duration: number
   createdAt: string
 }
 
@@ -79,9 +106,24 @@ export const interventionApi = {
   submitCbtSession: (data: {
     exerciseType: string
     responses: Record<string, string>
-  }) => request.post('/interventions/cbt', data),
+  }) => request.post<any, { data: CBTSession }>('/interventions/cbt', data),
+
+  getCbtHistory: (params?: { page?: number; size?: number }) =>
+    request.get<
+      any,
+      { data: { content: CBTSession[]; totalElements: number } }
+    >('/interventions/cbt/history', { params }),
 
   // 冥想记录
   recordMeditation: (data: { type: string; duration: number }) =>
-    request.post('/interventions/meditation', data),
+    request.post<any, { data: MeditationRecord }>(
+      '/interventions/meditation',
+      data
+    ),
+
+  getMeditationHistory: (params?: { page?: number; size?: number }) =>
+    request.get<
+      any,
+      { data: { content: MeditationRecord[]; totalElements: number } }
+    >('/interventions/meditation/history', { params }),
 }

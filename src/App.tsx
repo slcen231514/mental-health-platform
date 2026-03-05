@@ -12,6 +12,10 @@ import AssessmentHistory from './pages/AssessmentHistory'
 import Dialogue from './pages/Dialogue'
 import Intervention from './pages/Intervention'
 import Plans from './pages/Plans'
+import CBT from './pages/CBT'
+import CBTHistory from './pages/CBTHistory'
+import Meditation from './pages/Meditation'
+import MeditationHistory from './pages/MeditationHistory'
 import CounselorList from './pages/CounselorList'
 import CounselorDetail from './pages/CounselorDetail'
 import Appointments from './pages/Appointments'
@@ -42,6 +46,10 @@ function App() {
           <Route path="/dialogue" element={<Dialogue />} />
           <Route path="/intervention" element={<Intervention />} />
           <Route path="/plans" element={<Plans />} />
+          <Route path="/cbt" element={<CBT />} />
+          <Route path="/cbt/history" element={<CBTHistory />} />
+          <Route path="/meditation" element={<Meditation />} />
+          <Route path="/meditation/history" element={<MeditationHistory />} />
           <Route path="/counselor" element={<CounselorList />} />
           <Route path="/counselor/:id" element={<CounselorDetail />} />
           <Route path="/appointments" element={<Appointments />} />
