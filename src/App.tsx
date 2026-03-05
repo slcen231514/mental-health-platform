@@ -8,9 +8,11 @@ import Dashboard from './pages/Dashboard'
 import Assessment from './pages/Assessment'
 import AssessmentDetail from './pages/AssessmentDetail'
 import AssessmentResult from './pages/AssessmentResult'
+import AssessmentHistory from './pages/AssessmentHistory'
 import Dialogue from './pages/Dialogue'
 import Intervention from './pages/Intervention'
 import Counselor from './pages/Counselor'
+import CounselorList from './pages/CounselorList'
 import Profile from './pages/Profile'
 
 function App() {
@@ -32,9 +34,11 @@ function App() {
           <Route path="/assessment" element={<Assessment />} />
           <Route path="/assessment/:scaleCode" element={<AssessmentDetail />} />
           <Route path="/assessment/result/:id" element={<AssessmentResult />} />
+          <Route path="/assessment/history" element={<AssessmentHistory />} />
           <Route path="/dialogue" element={<Dialogue />} />
           <Route path="/intervention" element={<Intervention />} />
-          <Route path="/counselor" element={<Counselor />} />
+          <Route path="/counselor" element={<CounselorList />} />
+          <Route path="/counselor/:id" element={<Counselor />} />
           <Route path="/profile" element={<Profile />} />
         </Route>
         <Route path="*" element={<Navigate to="/" />} />

@@ -17,9 +17,9 @@ export interface RecentAssessment {
   id: number
   scaleCode: string
   scaleName: string
-  score: number
-  level: string
-  completedAt: string
+  totalScore: number // 后端返回的是 totalScore
+  severity: string // 后端返回的是 severity
+  createdAt: string // 后端返回的是 createdAt
 }
 
 /**
@@ -42,10 +42,7 @@ export const dashboardApi = {
    * 获取仪表盘统计数据
    */
   getStats: () => {
-    return request<DashboardStats>({
-      url: '/dashboard/stats',
-      method: 'GET',
-    })
+    return request.get<any, { data: DashboardStats }>('/dashboard/stats')
   },
 
   /**
@@ -53,11 +50,13 @@ export const dashboardApi = {
    * @param limit 返回数量限制
    */
   getRecentAssessments: (limit: number = 5) => {
-    return request<RecentAssessment[]>({
-      url: '/dashboard/recent-assessments',
-      method: 'GET',
-      params: { limit },
-    })
+    // 使用评估历史 API，获取最近的评估记录
+    return request.get<any, { data: { records: RecentAssessment[] } }>(
+      '/assessments/history',
+      {
+        params: { page: 0, size: limit },
+      }
+    )
   },
 
   /**
@@ -65,10 +64,11 @@ export const dashboardApi = {
    * @param limit 返回数量限制
    */
   getRecommendedContent: (limit: number = 6) => {
-    return request<RecommendedContent[]>({
-      url: '/dashboard/recommendations',
-      method: 'GET',
-      params: { limit },
-    })
+    return request.get<any, { data: RecommendedContent[] }>(
+      '/dashboard/recommendations',
+      {
+        params: { limit },
+      }
+    )
   },
 }

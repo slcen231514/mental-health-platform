@@ -61,7 +61,8 @@ export default function Dashboard() {
       ])
 
       setStats(statsRes.data)
-      setRecentAssessments(assessmentsRes.data)
+      // 评估历史 API 返回的是分页数据，需要取 records 字段
+      setRecentAssessments(assessmentsRes.data.records || [])
       setRecommendations(recommendationsRes.data)
     } catch (error) {
       console.error('获取仪表盘数据失败:', error)
@@ -173,7 +174,7 @@ export default function Dashboard() {
                         key="detail"
                         type="link"
                         onClick={() =>
-                          navigate(`/assessment/${item.scaleCode}`)
+                          navigate(`/assessment/result/${item.id}`)
                         }
                       >
                         查看详情
@@ -184,12 +185,12 @@ export default function Dashboard() {
                       title={item.scaleName}
                       description={
                         <Space>
-                          <Text>得分: {item.score}</Text>
+                          <Text>得分: {item.totalScore}</Text>
                           <Text type="secondary">|</Text>
-                          <Text>等级: {item.level}</Text>
+                          <Text>等级: {item.severity}</Text>
                           <Text type="secondary">|</Text>
                           <Text type="secondary">
-                            {formatDate(item.completedAt)}
+                            {formatDate(item.createdAt)}
                           </Text>
                         </Space>
                       }

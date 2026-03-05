@@ -36,15 +36,33 @@ export default function MainLayout() {
   }
 
   const userMenuItems = [
-    { key: 'profile', icon: <UserOutlined />, label: '个人中心', onClick: () => navigate('/profile') },
-    { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', onClick: handleLogout },
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: '个人中心',
+      onClick: () => navigate('/profile'),
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: '退出登录',
+      onClick: handleLogout,
+    },
   ]
 
   return (
     <Layout className="min-h-screen">
-      <Sider trigger={null} collapsible collapsed={collapsed} theme="light" className="shadow-md">
+      <Sider
+        trigger={null}
+        collapsible
+        collapsed={collapsed}
+        theme="light"
+        className="shadow-md"
+      >
         <div className="h-16 flex items-center justify-center border-b">
-          <span className={`font-bold text-primary ${collapsed ? 'text-lg' : 'text-xl'}`}>
+          <span
+            className={`font-bold text-primary ${collapsed ? 'text-lg' : 'text-xl'}`}
+          >
             {collapsed ? '心理' : '心理健康平台'}
           </span>
         </div>
@@ -56,7 +74,7 @@ export default function MainLayout() {
           className="border-r-0"
         />
       </Sider>
-      <Layout>
+      <Layout className="overflow-hidden">
         <Header className="bg-white px-4 flex items-center justify-between shadow-sm">
           <Button
             type="text"
@@ -70,7 +88,10 @@ export default function MainLayout() {
             </div>
           </Dropdown>
         </Header>
-        <Content className="m-4 p-6 bg-white rounded-lg min-h-[calc(100vh-112px)]">
+        <Content
+          className="m-4 p-6 bg-white rounded-lg overflow-y-auto"
+          style={{ height: 'calc(100vh - 112px)' }}
+        >
           <Outlet />
         </Content>
       </Layout>
