@@ -9,8 +9,9 @@ import Assessment from './pages/Assessment'
 import AssessmentDetail from './pages/AssessmentDetail'
 import AssessmentResult from './pages/AssessmentResult'
 import AssessmentHistory from './pages/AssessmentHistory'
-// import Dialogue from './pages/Dialogue'  // 暂时注释，等待实现
+import Dialogue from './pages/Dialogue'
 import Intervention from './pages/Intervention'
+import Plans from './pages/Plans'
 import CounselorList from './pages/CounselorList'
 import CounselorDetail from './pages/CounselorDetail'
 import Appointments from './pages/Appointments'
@@ -38,8 +39,9 @@ function App() {
           <Route path="/assessment/:scaleCode" element={<AssessmentDetail />} />
           <Route path="/assessment/result/:id" element={<AssessmentResult />} />
           <Route path="/assessment/history" element={<AssessmentHistory />} />
-          {/* <Route path="/dialogue" element={<Dialogue />} /> */}
+          <Route path="/dialogue" element={<Dialogue />} />
           <Route path="/intervention" element={<Intervention />} />
+          <Route path="/plans" element={<Plans />} />
           <Route path="/counselor" element={<CounselorList />} />
           <Route path="/counselor/:id" element={<CounselorDetail />} />
           <Route path="/appointments" element={<Appointments />} />

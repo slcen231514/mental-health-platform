@@ -1,5 +1,25 @@
 import request from './request'
 
+export interface InterventionTask {
+  id: number
+  title: string
+  description: string
+  type: string
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'
+  dueDate: string
+  completedAt?: string
+}
+
+export interface InterventionPlan {
+  id: number
+  userId: number
+  status: 'ACTIVE' | 'COMPLETED' | 'PAUSED'
+  tasks: InterventionTask[]
+  startDate: string
+  endDate: string
+  createdAt: string
+}
+
 export interface Diary {
   id: number
   userId: number
@@ -19,24 +39,48 @@ export interface SleepRecord {
 }
 
 export const interventionApi = {
+  // 干预计划
+  getPlans: () =>
+    request.get<any, { data: InterventionPlan[] }>('/interventions/plans'),
+
+  getPlanById: (id: number) =>
+    request.get<any, { data: InterventionPlan }>(`/interventions/plans/${id}`),
+
+  completeTask: (planId: number, taskId: number) =>
+    request.post(`/interventions/plans/${planId}/tasks/${taskId}/complete`),
+
   // 情绪日记
-  saveDiary: (data: { content: string; emotionType: string; emotionLevel: number }) =>
-    request.post<any, { data: Diary }>('/interventions/diary', data),
-  
+  saveDiary: (data: {
+    content: string
+    emotionType: string
+    emotionLevel: number
+  }) => request.post<any, { data: Diary }>('/interventions/diary', data),
+
   getDiaryHistory: (params?: { page?: number; size?: number }) =>
-    request.get<any, { data: { content: Diary[]; totalElements: number } }>('/interventions/diary', { params }),
-  
+    request.get<any, { data: { content: Diary[]; totalElements: number } }>(
+      '/interventions/diary',
+      { params }
+    ),
+
   // 睡眠记录
-  saveSleepRecord: (data: { sleepTime: string; wakeTime: string; quality: number }) =>
-    request.post<any, { data: SleepRecord }>('/interventions/sleep', data),
-  
+  saveSleepRecord: (data: {
+    sleepTime: string
+    wakeTime: string
+    quality: number
+  }) => request.post<any, { data: SleepRecord }>('/interventions/sleep', data),
+
   getSleepHistory: (params?: { page?: number; size?: number }) =>
-    request.get<any, { data: { content: SleepRecord[]; totalElements: number } }>('/interventions/sleep', { params }),
-  
+    request.get<
+      any,
+      { data: { content: SleepRecord[]; totalElements: number } }
+    >('/interventions/sleep', { params }),
+
   // CBT练习
-  submitCbtSession: (data: { exerciseType: string; responses: Record<string, string> }) =>
-    request.post('/interventions/cbt', data),
-  
+  submitCbtSession: (data: {
+    exerciseType: string
+    responses: Record<string, string>
+  }) => request.post('/interventions/cbt', data),
+
   // 冥想记录
   recordMeditation: (data: { type: string; duration: number }) =>
     request.post('/interventions/meditation', data),
