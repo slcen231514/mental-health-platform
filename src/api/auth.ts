@@ -41,7 +41,7 @@ export interface TokenResponse {
 }
 
 export interface ApiResponse<T = any> {
-  code: string
+  code: number
   message: string
   data: T
 }
