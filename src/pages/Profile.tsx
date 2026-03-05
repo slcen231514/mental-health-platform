@@ -1,168 +1,312 @@
-import { useState } from 'react'
-import { Card, Form, Input, Button, Select, DatePicker, Tabs, List, Tag, message } from 'antd'
-import { UserOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons'
-import { useAuthStore } from '../store/authStore'
-
-const mockAssessmentHistory = [
-  { id: 1, scale: 'PHQ-9', score: 8, severity: '轻度抑郁', date: '2024-01-05' },
-  { id: 2, scale: 'GAD-7', score: 5, severity: '轻度焦虑', date: '2024-01-03' },
-  { id: 3, scale: 'PHQ-9', score: 12, severity: '中度抑郁', date: '2023-12-28' },
-]
-
-const mockAppointments = [
-  { id: 1, counselor: '张医生', date: '2024-01-10 14:00', status: 'upcoming' },
-  { id: 2, counselor: '李医生', date: '2024-01-03 10:00', status: 'completed' },
-]
+import { useState, useEffect } from 'react'
+import {
+  Card,
+  Form,
+  Input,
+  Button,
+  Select,
+  Upload,
+  Avatar,
+  message,
+  Modal,
+  Spin,
+} from 'antd'
+import {
+  UserOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  CameraOutlined,
+  LockOutlined,
+} from '@ant-design/icons'
+import { useAuthStore } from '@/store/authStore'
+import { userApi } from '@/api/user'
 
 export default function Profile() {
   const { user } = useAuthStore()
-  const [loading, setLoading] = useState(false)
+  const [form] = Form.useForm()
+  const [passwordForm] = Form.useForm()
+  const [editMode, setEditMode] = useState(false)
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false)
+  const [avatarLoading, setAvatarLoading] = useState(false)
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [updateLoading, setUpdateLoading] = useState(false)
 
-  const handleUpdateProfile = async () => {
-    setLoading(true)
-    // 模拟API调用
-    setTimeout(() => {
-      message.success('个人信息更新成功')
-      setLoading(false)
-    }, 1000)
+  // 当user更新时，更新表单值
+  useEffect(() => {
+    if (user) {
+      form.setFieldsValue({
+        username: user.username,
+        email: user.email,
+        phone: user.phone || '',
+        gender: user.gender || '',
+        bio: user.bio || '',
+      })
+    }
+  }, [user, form])
+
+  // 处理头像上传
+  const handleAvatarUpload = async (file: File) => {
+    try {
+      setAvatarLoading(true)
+      await userApi.uploadAvatar(file)
+      message.success('头像上传成功')
+      // TODO: 更新用户头像到authStore
+    } catch (error: any) {
+      message.error(error?.message || '头像上传失败')
+    } finally {
+      setAvatarLoading(false)
+    }
+    return false // 阻止默认上传行为
   }
 
-  const tabItems = [
-    {
-      key: 'profile',
-      label: '基本信息',
-      children: (
-        <Card>
-          <Form
-            layout="vertical"
-            initialValues={{
-              username: user?.username,
-              email: user?.email,
-              phone: user?.phone,
-              gender: user?.gender,
-            }}
-            onFinish={handleUpdateProfile}
-          >
-            <Form.Item label="用户名" name="username">
-              <Input prefix={<UserOutlined />} disabled />
-            </Form.Item>
-            <Form.Item label="邮箱" name="email">
-              <Input prefix={<MailOutlined />} disabled />
-            </Form.Item>
-            <Form.Item label="手机号" name="phone">
-              <Input prefix={<PhoneOutlined />} />
-            </Form.Item>
-            <Form.Item label="性别" name="gender">
-              <Select>
-                <Select.Option value="MALE">男</Select.Option>
-                <Select.Option value="FEMALE">女</Select.Option>
-                <Select.Option value="OTHER">其他</Select.Option>
-              </Select>
-            </Form.Item>
-            <Form.Item label="出生日期" name="birthDate">
-              <DatePicker className="w-full" />
-            </Form.Item>
-            <Form.Item>
-              <Button type="primary" htmlType="submit" loading={loading}>
-                保存修改
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
-      ),
-    },
-    {
-      key: 'assessments',
-      label: '评估记录',
-      children: (
-        <Card>
-          <List
-            dataSource={mockAssessmentHistory}
-            renderItem={(item) => (
-              <List.Item>
-                <div className="flex-1">
-                  <span className="font-medium">{item.scale}</span>
-                  <span className="ml-4 text-gray-500">{item.date}</span>
-                </div>
-                <div>
-                  <span className="mr-4">得分: {item.score}</span>
-                  <Tag color={item.severity.includes('轻度') ? 'blue' : 'orange'}>
-                    {item.severity}
-                  </Tag>
-                </div>
-              </List.Item>
-            )}
-          />
-        </Card>
-      ),
-    },
-    {
-      key: 'appointments',
-      label: '预约记录',
-      children: (
-        <Card>
-          <List
-            dataSource={mockAppointments}
-            renderItem={(item) => (
-              <List.Item>
-                <div className="flex-1">
-                  <span className="font-medium">{item.counselor}</span>
-                  <span className="ml-4 text-gray-500">{item.date}</span>
-                </div>
-                <Tag color={item.status === 'upcoming' ? 'processing' : 'success'}>
-                  {item.status === 'upcoming' ? '即将开始' : '已完成'}
-                </Tag>
-              </List.Item>
-            )}
-          />
-        </Card>
-      ),
-    },
-    {
-      key: 'security',
-      label: '安全设置',
-      children: (
-        <Card>
-          <Form layout="vertical" onFinish={() => message.success('密码修改成功')}>
-            <Form.Item
-              label="当前密码"
-              name="currentPassword"
-              rules={[{ required: true, message: '请输入当前密码' }]}
-            >
-              <Input.Password />
-            </Form.Item>
-            <Form.Item
-              label="新密码"
-              name="newPassword"
-              rules={[
-                { required: true, message: '请输入新密码' },
-                { min: 8, message: '密码至少8个字符' },
-              ]}
-            >
-              <Input.Password />
-            </Form.Item>
-            <Form.Item
-              label="确认新密码"
-              name="confirmPassword"
-              rules={[{ required: true, message: '请确认新密码' }]}
-            >
-              <Input.Password />
-            </Form.Item>
-            <Form.Item>
-              <Button type="primary" htmlType="submit">
-                修改密码
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
-      ),
-    },
-  ]
+  // 处理信息保存
+  const handleSaveProfile = async (values: any) => {
+    try {
+      setUpdateLoading(true)
+      await userApi.updateUserProfile({
+        phone: values.phone,
+        gender: values.gender,
+        bio: values.bio,
+      })
+      message.success('更新成功')
+      setEditMode(false)
+      // TODO: 更新用户信息到authStore
+    } catch (error: any) {
+      message.error(error?.message || '更新失败')
+    } finally {
+      setUpdateLoading(false)
+    }
+  }
+
+  // 处理密码修改
+  const handleChangePassword = async (values: any) => {
+    try {
+      setPasswordLoading(true)
+      await userApi.changePassword({
+        oldPassword: values.oldPassword,
+        newPassword: values.newPassword,
+        confirmPassword: values.confirmPassword,
+      })
+      message.success('密码修改成功')
+      setPasswordModalVisible(false)
+      passwordForm.resetFields()
+    } catch (error: any) {
+      message.error(error?.message || '密码修改失败')
+    } finally {
+      setPasswordLoading(false)
+    }
+  }
+
+  // 取消编辑
+  const handleCancelEdit = () => {
+    setEditMode(false)
+    form.resetFields()
+  }
+
+  if (!user) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Spin size="large" />
+      </div>
+    )
+  }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">个人中心</h1>
-      <Tabs items={tabItems} />
+    <div className="max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">个人信息</h1>
+
+      <Card>
+        {/* 头像部分 */}
+        <div className="flex justify-center mb-8">
+          <div className="relative">
+            <Avatar
+              size={120}
+              icon={<UserOutlined />}
+              src={user?.avatar}
+              className="border-4 border-gray-200"
+            />
+            <Upload
+              accept="image/*"
+              showUploadList={false}
+              beforeUpload={handleAvatarUpload}
+            >
+              <Button
+                type="primary"
+                shape="circle"
+                icon={<CameraOutlined />}
+                loading={avatarLoading}
+                className="absolute bottom-0 right-0"
+                title="上传头像"
+              />
+            </Upload>
+          </div>
+        </div>
+
+        {/* 基本信息表单 */}
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSaveProfile}
+          disabled={!editMode}
+        >
+          <Form.Item label="用户名" name="username">
+            <Input prefix={<UserOutlined />} disabled />
+          </Form.Item>
+
+          <Form.Item label="邮箱" name="email">
+            <Input prefix={<MailOutlined />} disabled />
+          </Form.Item>
+
+          <Form.Item
+            label="手机号"
+            name="phone"
+            rules={[
+              {
+                pattern: /^1[3-9]\d{9}$/,
+                message: '请输入有效的手机号',
+              },
+            ]}
+          >
+            <Input prefix={<PhoneOutlined />} placeholder="请输入手机号" />
+          </Form.Item>
+
+          <Form.Item label="性别" name="gender">
+            <Select placeholder="请选择性别">
+              <Select.Option value="MALE">男</Select.Option>
+              <Select.Option value="FEMALE">女</Select.Option>
+              <Select.Option value="OTHER">其他</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="个人简介" name="bio">
+            <Input.TextArea
+              rows={4}
+              placeholder="介绍一下自己..."
+              maxLength={200}
+              showCount
+            />
+          </Form.Item>
+
+          {/* 操作按钮 */}
+          <Form.Item>
+            <div className="flex gap-4">
+              {!editMode ? (
+                <>
+                  <Button type="primary" onClick={() => setEditMode(true)}>
+                    编辑信息
+                  </Button>
+                  <Button
+                    icon={<LockOutlined />}
+                    onClick={() => setPasswordModalVisible(true)}
+                  >
+                    修改密码
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={updateLoading}
+                  >
+                    保存修改
+                  </Button>
+                  <Button onClick={handleCancelEdit}>取消</Button>
+                </>
+              )}
+            </div>
+          </Form.Item>
+        </Form>
+      </Card>
+
+      {/* 修改密码模态框 */}
+      <Modal
+        title="修改密码"
+        open={passwordModalVisible}
+        onCancel={() => {
+          setPasswordModalVisible(false)
+          passwordForm.resetFields()
+        }}
+        footer={null}
+      >
+        <Form
+          form={passwordForm}
+          layout="vertical"
+          onFinish={handleChangePassword}
+        >
+          <Form.Item
+            label="旧密码"
+            name="oldPassword"
+            rules={[{ required: true, message: '请输入旧密码' }]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="请输入旧密码"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="新密码"
+            name="newPassword"
+            rules={[
+              { required: true, message: '请输入新密码' },
+              { min: 8, message: '密码至少8个字符' },
+              {
+                pattern:
+                  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/,
+                message: '密码必须包含大小写字母和数字',
+              },
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="请输入新密码"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="确认密码"
+            name="confirmPassword"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: '请确认新密码' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve()
+                  }
+                  return Promise.reject(new Error('两次输入的密码不一致'))
+                },
+              }),
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="请再次输入新密码"
+            />
+          </Form.Item>
+
+          <Form.Item>
+            <div className="flex gap-4 justify-end">
+              <Button
+                onClick={() => {
+                  setPasswordModalVisible(false)
+                  passwordForm.resetFields()
+                }}
+              >
+                取消
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={passwordLoading}
+              >
+                确认修改
+              </Button>
+            </div>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }

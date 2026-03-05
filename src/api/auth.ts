@@ -28,6 +28,8 @@ export interface User {
   email: string
   phone?: string
   gender?: string
+  avatar?: string
+  bio?: string
   status: string
   roles: string[]
 }
