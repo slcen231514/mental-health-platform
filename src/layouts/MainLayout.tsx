@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Layout, Menu, Avatar, Dropdown, Button, Badge } from 'antd'
+import { Layout, Menu, Avatar, Dropdown, Button, Badge, Drawer } from 'antd'
 import {
   HomeOutlined,
   FormOutlined,
@@ -29,10 +29,23 @@ const menuItems = [
 
 export default function MainLayout() {
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileDrawerVisible, setMobileDrawerVisible] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuthStore()
   const { unreadCount, fetchUnreadCount } = useNotificationStore()
+
+  // 检测屏幕尺寸
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // 定期获取未读通知数量
   useEffect(() => {
@@ -84,38 +97,75 @@ export default function MainLayout() {
     },
   ]
 
+  const handleMenuClick = (key: string) => {
+    navigate(key)
+    if (isMobile) {
+      setMobileDrawerVisible(false)
+    }
+  }
+
+  // 侧边栏内容
+  const sidebarContent = (
+    <>
+      <div className="h-16 flex items-center justify-center border-b">
+        <span
+          className={`font-bold text-primary ${collapsed ? 'text-lg' : 'text-xl'}`}
+        >
+          {collapsed ? '心理' : '心理健康平台'}
+        </span>
+      </div>
+      <Menu
+        mode="inline"
+        selectedKeys={[location.pathname]}
+        items={menuItems}
+        onClick={({ key }) => handleMenuClick(key)}
+        className="border-r-0"
+      />
+    </>
+  )
+
   return (
     <Layout className="min-h-screen">
-      <Sider
-        trigger={null}
-        collapsible
-        collapsed={collapsed}
-        theme="light"
-        className="shadow-md"
-      >
-        <div className="h-16 flex items-center justify-center border-b">
-          <span
-            className={`font-bold text-primary ${collapsed ? 'text-lg' : 'text-xl'}`}
-          >
-            {collapsed ? '心理' : '心理健康平台'}
-          </span>
-        </div>
-        <Menu
-          mode="inline"
-          selectedKeys={[location.pathname]}
-          items={menuItems}
-          onClick={({ key }) => navigate(key)}
-          className="border-r-0"
-        />
-      </Sider>
+      {/* 桌面端侧边栏 */}
+      {!isMobile && (
+        <Sider
+          trigger={null}
+          collapsible
+          collapsed={collapsed}
+          theme="light"
+          className="shadow-md"
+        >
+          {sidebarContent}
+        </Sider>
+      )}
+
+      {/* 移动端抽屉 */}
+      {isMobile && (
+        <Drawer
+          placement="left"
+          onClose={() => setMobileDrawerVisible(false)}
+          open={mobileDrawerVisible}
+          bodyStyle={{ padding: 0 }}
+          width={250}
+        >
+          {sidebarContent}
+        </Drawer>
+      )}
+
       <Layout className="overflow-hidden">
         <Header className="bg-white px-4 flex items-center justify-between shadow-sm">
           <Button
             type="text"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => {
+              if (isMobile) {
+                setMobileDrawerVisible(!mobileDrawerVisible)
+              } else {
+                setCollapsed(!collapsed)
+              }
+            }}
           />
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <Badge count={unreadCount} offset={[-5, 5]}>
               <Button
                 type="text"
@@ -125,19 +175,20 @@ export default function MainLayout() {
               />
             </Badge>
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-              <div className="flex items-center cursor-pointer hover:bg-gray-100 px-3 py-1 rounded">
+              <div className="flex items-center cursor-pointer hover:bg-gray-100 px-2 md:px-3 py-1 rounded">
                 <Avatar
+                  size={isMobile ? 'small' : 'default'}
                   icon={<UserOutlined />}
                   src={getAvatarUrl(user?.avatar)}
                   className="bg-primary"
                 />
-                <span className="ml-2">{user?.username}</span>
+                <span className="ml-2 hidden sm:inline">{user?.username}</span>
               </div>
             </Dropdown>
           </div>
         </Header>
         <Content
-          className="m-4 p-6 bg-white rounded-lg overflow-y-auto"
+          className="m-2 md:m-4 p-3 md:p-6 bg-white rounded-lg overflow-y-auto"
           style={{ height: 'calc(100vh - 112px)' }}
         >
           <Outlet />

@@ -16,6 +16,8 @@ import CBT from './pages/CBT'
 import CBTHistory from './pages/CBTHistory'
 import Meditation from './pages/Meditation'
 import MeditationHistory from './pages/MeditationHistory'
+import Sleep from './pages/Sleep'
+import Diary from './pages/Diary'
 import CounselorList from './pages/CounselorList'
 import CounselorDetail from './pages/CounselorDetail'
 import Appointments from './pages/Appointments'
@@ -50,6 +52,8 @@ function App() {
           <Route path="/cbt/history" element={<CBTHistory />} />
           <Route path="/meditation" element={<Meditation />} />
           <Route path="/meditation/history" element={<MeditationHistory />} />
+          <Route path="/sleep" element={<Sleep />} />
+          <Route path="/diary" element={<Diary />} />
           <Route path="/counselor" element={<CounselorList />} />
           <Route path="/counselor/:id" element={<CounselorDetail />} />
           <Route path="/appointments" element={<Appointments />} />
