@@ -1,68 +1,33 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { PrivateRoute } from '@/components'
-import MainLayout from './layouts/MainLayout'
-import AuthLayout from './layouts/AuthLayout'
-import Login from './pages/auth/Login'
-import Register from './pages/auth/Register'
-import Dashboard from './pages/Dashboard'
-import Assessment from './pages/Assessment'
-import AssessmentDetail from './pages/AssessmentDetail'
-import AssessmentResult from './pages/AssessmentResult'
-import AssessmentHistory from './pages/AssessmentHistory'
-import Dialogue from './pages/Dialogue'
-import Intervention from './pages/Intervention'
-import Plans from './pages/Plans'
-import CBT from './pages/CBT'
-import CBTHistory from './pages/CBTHistory'
-import Meditation from './pages/Meditation'
-import MeditationHistory from './pages/MeditationHistory'
-import Sleep from './pages/Sleep'
-import Diary from './pages/Diary'
-import CounselorList from './pages/CounselorList'
-import CounselorDetail from './pages/CounselorDetail'
-import Appointments from './pages/Appointments'
-import Profile from './pages/Profile'
-import Notifications from './pages/Notifications'
-import Settings from './pages/Settings'
+import { Suspense } from 'react'
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useRoutes,
+} from 'react-router-dom'
+import { Spin } from 'antd'
+import { routes } from '@/router'
+
+// 加载中组件
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <Spin size="large" tip="加载中..." />
+  </div>
+)
+
+// 路由组件
+function AppRoutes() {
+  const element = useRoutes(routes)
+  return element
+}
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<AuthLayout />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-        </Route>
-        <Route
-          element={
-            <PrivateRoute>
-              <MainLayout />
-            </PrivateRoute>
-          }
-        >
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/assessment" element={<Assessment />} />
-          <Route path="/assessment/:scaleCode" element={<AssessmentDetail />} />
-          <Route path="/assessment/result/:id" element={<AssessmentResult />} />
-          <Route path="/assessment/history" element={<AssessmentHistory />} />
-          <Route path="/dialogue" element={<Dialogue />} />
-          <Route path="/intervention" element={<Intervention />} />
-          <Route path="/plans" element={<Plans />} />
-          <Route path="/cbt" element={<CBT />} />
-          <Route path="/cbt/history" element={<CBTHistory />} />
-          <Route path="/meditation" element={<Meditation />} />
-          <Route path="/meditation/history" element={<MeditationHistory />} />
-          <Route path="/sleep" element={<Sleep />} />
-          <Route path="/diary" element={<Diary />} />
-          <Route path="/counselor" element={<CounselorList />} />
-          <Route path="/counselor/:id" element={<CounselorDetail />} />
-          <Route path="/appointments" element={<Appointments />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/settings" element={<Settings />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <AppRoutes />
+      </Suspense>
     </BrowserRouter>
   )
 }

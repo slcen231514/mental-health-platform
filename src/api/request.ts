@@ -47,7 +47,7 @@ request.interceptors.request.use(
 
 // 响应拦截器 - 错误处理和令牌刷新
 request.interceptors.response.use(
-  (response) => {
+  response => {
     // 直接返回 data 部分
     return response.data
   },
@@ -70,7 +70,7 @@ request.interceptors.response.use(
 
         if (!refreshToken) {
           // 没有 refresh token，直接登出
-          useAuthStore.getState().logout()
+          useAuthStore.getState().clearAuth()
           window.location.href = '/login'
           message.error('登录已过期，请重新登录')
           return Promise.reject(error)
@@ -78,7 +78,7 @@ request.interceptors.response.use(
 
         // 如果正在刷新 token，将请求加入队列
         if (isRefreshing) {
-          return new Promise((resolve) => {
+          return new Promise(resolve => {
             requests.push((token: string) => {
               if (config) {
                 config.headers.Authorization = `Bearer ${token}`
@@ -92,18 +92,15 @@ request.interceptors.response.use(
 
         try {
           // 调用刷新 token 接口
-          const { data: tokenData } = await axios.post('/api/users/refresh', null, {
-            params: { refreshToken },
-          })
+          await useAuthStore.getState().refreshAccessToken()
+          const newAccessToken = useAuthStore.getState().accessToken
 
-          const newAccessToken = tokenData.data.accessToken
-          const newRefreshToken = tokenData.data.refreshToken
-
-          // 更新 store 中的 token
-          useAuthStore.getState().setTokens(newAccessToken, newRefreshToken)
+          if (!newAccessToken) {
+            throw new Error('刷新token失败')
+          }
 
           // 重试队列中的请求
-          requests.forEach((cb) => cb(newAccessToken))
+          requests.forEach(cb => cb(newAccessToken))
           requests = []
 
           // 重试当前请求
@@ -113,7 +110,7 @@ request.interceptors.response.use(
           }
         } catch (refreshError) {
           // 刷新 token 失败，登出
-          useAuthStore.getState().logout()
+          useAuthStore.getState().clearAuth()
           window.location.href = '/login'
           message.error('登录已过期，请重新登录')
           return Promise.reject(refreshError)
@@ -124,7 +121,11 @@ request.interceptors.response.use(
       }
 
       case 403:
+        // 权限不足 - 重定向到403页面
         message.error('没有权限访问该资源')
+        if (window.location.pathname !== '/403') {
+          window.location.href = '/403'
+        }
         break
 
       case 404:

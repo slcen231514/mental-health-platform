@@ -12,3 +12,5 @@ export type { PrivateRouteProps } from './PrivateRoute'
 
 export { default as Empty, EmptyTypes } from './Empty'
 export type { EmptyProps } from './Empty'
+
+export { default as RoleSwitcher } from './RoleSwitcher'

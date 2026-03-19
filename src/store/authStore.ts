@@ -2,12 +2,14 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { authApi, LoginRequest, type User } from '@/api/auth'
 import { message } from 'antd'
+import request from '@/api/request'
 
 interface AuthState {
   // 状态
   user: User | null
   accessToken: string | null
   refreshToken: string | null
+  activeRole: string | null // 当前活动角色
   isAuthenticated: boolean
   isLoading: boolean
 
@@ -15,10 +17,14 @@ interface AuthState {
   login: (data: LoginRequest) => Promise<void>
   logout: () => Promise<void>
   refreshAccessToken: () => Promise<void>
+  switchRole: (role: string) => Promise<void>
   setAuth: (user: User, accessToken: string, refreshToken: string) => void
   setTokens: (accessToken: string, refreshToken: string) => void
   setUser: (user: User) => void
+  setActiveRole: (role: string) => void
   clearAuth: () => void
+  hasRole: (role: string) => boolean
+  hasAnyRole: (roles: string[]) => boolean
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -28,6 +34,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       accessToken: null,
       refreshToken: null,
+      activeRole: null,
       isAuthenticated: false,
       isLoading: false,
 
@@ -38,10 +45,15 @@ export const useAuthStore = create<AuthState>()(
           const response = await authApi.login(data)
           const { user, accessToken, refreshToken } = response.data
 
+          // 设置默认活动角色为用户的第一个角色
+          const defaultRole =
+            user.roles && user.roles.length > 0 ? user.roles[0] : null
+
           set({
             user,
             accessToken,
             refreshToken,
+            activeRole: defaultRole,
             isAuthenticated: true,
             isLoading: false,
           })
@@ -64,6 +76,7 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             accessToken: null,
             refreshToken: null,
+            activeRole: null,
             isAuthenticated: false,
             isLoading: false,
           })
@@ -75,6 +88,7 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             accessToken: null,
             refreshToken: null,
+            activeRole: null,
             isAuthenticated: false,
             isLoading: false,
           })
@@ -106,6 +120,7 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             accessToken: null,
             refreshToken: null,
+            activeRole: null,
             isAuthenticated: false,
           })
 
@@ -114,12 +129,48 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      // 切换角色 action
+      switchRole: async (role: string) => {
+        try {
+          const { user } = get()
+          if (!user) {
+            throw new Error('用户未登录')
+          }
+
+          // 验证用户是否拥有该角色
+          if (!user.roles.includes(role)) {
+            throw new Error('用户没有该角色权限')
+          }
+
+          // 调用后端API切换角色
+          const response = await request.post(`/users/${user.id}/switch-role`, {
+            activeRole: role,
+          })
+
+          const { token: newAccessToken } = response.data
+
+          // 更新活动角色和token
+          set({
+            activeRole: role,
+            accessToken: newAccessToken,
+          })
+
+          message.success(`已切换到${getRoleDisplayName(role)}角色`)
+        } catch (error: any) {
+          message.error(error?.message || '角色切换失败')
+          throw error
+        }
+      },
+
       // 设置认证信息
       setAuth: (user, accessToken, refreshToken) => {
+        const defaultRole =
+          user.roles && user.roles.length > 0 ? user.roles[0] : null
         set({
           user,
           accessToken,
           refreshToken,
+          activeRole: defaultRole,
           isAuthenticated: true,
         })
       },
@@ -134,14 +185,33 @@ export const useAuthStore = create<AuthState>()(
         set({ user })
       },
 
+      // 设置活动角色
+      setActiveRole: role => {
+        set({ activeRole: role })
+      },
+
       // 清除认证信息
       clearAuth: () => {
         set({
           user: null,
           accessToken: null,
           refreshToken: null,
+          activeRole: null,
           isAuthenticated: false,
         })
+      },
+
+      // 检查用户是否拥有指定角色
+      hasRole: (role: string) => {
+        const { user } = get()
+        return user?.roles?.includes(role) || false
+      },
+
+      // 检查用户是否拥有任意一个指定角色
+      hasAnyRole: (roles: string[]) => {
+        const { user } = get()
+        if (!user?.roles) return false
+        return roles.some(role => user.roles.includes(role))
       },
     }),
     {
@@ -151,10 +221,21 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
+        activeRole: state.activeRole,
         isAuthenticated: state.isAuthenticated,
       }),
     }
   )
 )
+
+// 辅助函数：获取角色显示名称
+function getRoleDisplayName(role: string): string {
+  const roleNames: Record<string, string> = {
+    USER: '普通用户',
+    COUNSELOR: '咨询师',
+    ADMIN: '管理员',
+  }
+  return roleNames[role] || role
+}
 
 export default useAuthStore

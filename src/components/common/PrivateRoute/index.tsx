@@ -16,22 +16,23 @@ export interface PrivateRouteProps {
    */
   redirectTo?: string
   /**
-   * 是否需要特定权限
+   * 需要的角色列表（满足任意一个即可）
    */
-  requiredPermission?: string
+  requiredRoles?: string[]
 }
 
 /**
  * PrivateRoute 路由守卫组件
  * 用于保护需要登录才能访问的路由
+ * 支持基于角色的访问控制
  */
 const PrivateRoute: React.FC<PrivateRouteProps> = ({
   children,
   redirectTo = '/login',
-  requiredPermission,
+  requiredRoles,
 }) => {
   const location = useLocation()
-  const { isAuthenticated, user, isLoading } = useAuthStore()
+  const { isAuthenticated, user, activeRole, isLoading } = useAuthStore()
 
   // 如果正在加载认证状态，显示加载中
   if (isLoading) {
@@ -44,38 +45,31 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({
     return <Navigate to={redirectTo} state={{ from: location }} replace />
   }
 
-  // 如果需要特定权限，检查用户是否有该权限
-  if (requiredPermission && user) {
-    // 这里可以根据实际的权限系统进行检查
-    // 示例：检查用户角色或权限列表
-    const hasPermission = checkUserPermission(user, requiredPermission)
-    if (!hasPermission) {
+  // 如果需要特定角色，检查用户是否有该角色
+  if (requiredRoles && requiredRoles.length > 0 && user) {
+    // 检查用户是否拥有任意一个所需角色
+    const hasRequiredRole = requiredRoles.some(role =>
+      user.roles?.includes(role)
+    )
+
+    if (!hasRequiredRole) {
+      // 用户没有所需角色，重定向到403页面
       return (
-        <Navigate to="/403" state={{ from: location, requiredPermission }} replace />
+        <Navigate
+          to="/403"
+          state={{
+            from: location,
+            requiredRole: requiredRoles.join(' 或 '),
+            currentRole: activeRole,
+          }}
+          replace
+        />
       )
     }
   }
 
   // 已登录且有权限，渲染子组件
   return <>{children}</>
-}
-
-/**
- * 检查用户权限（示例实现）
- * 实际项目中需要根据具体的权限系统实现
- */
-function checkUserPermission(user: any, permission: string): boolean {
-  // 示例：检查用户角色
-  if (user.role === 'admin') {
-    return true
-  }
-
-  // 示例：检查用户权限列表
-  if (user.permissions && Array.isArray(user.permissions)) {
-    return user.permissions.includes(permission)
-  }
-
-  return false
 }
 
 export default PrivateRoute

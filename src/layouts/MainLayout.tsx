@@ -16,6 +16,7 @@ import {
 } from '@ant-design/icons'
 import { useAuthStore } from '../store/authStore'
 import { useNotificationStore } from '../store/notificationStore'
+import { RoleSwitcher } from '@/components'
 
 const { Header, Sider, Content } = Layout
 
@@ -166,6 +167,9 @@ export default function MainLayout() {
             }}
           />
           <div className="flex items-center gap-2 md:gap-4">
+            {/* 角色切换器 - 仅在用户有多个角色时显示 */}
+            <RoleSwitcher />
+
             <Badge count={unreadCount} offset={[-5, 5]}>
               <Button
                 type="text"

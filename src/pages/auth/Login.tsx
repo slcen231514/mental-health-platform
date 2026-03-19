@@ -4,6 +4,7 @@ import { Form, Input, Button, Checkbox, Card, Divider, Space } from 'antd'
 import { UserOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons'
 import { useAuthStore } from '@/store'
 import { formRules, handleError, showSuccess } from '@/utils'
+import { getDefaultHomePath } from '@/router'
 import type { LoginRequest } from '@/api/auth'
 
 /**
@@ -21,10 +22,10 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
-  const { login } = useAuthStore()
+  const { login, activeRole } = useAuthStore()
 
   // 获取登录前的路径，登录成功后跳转回去
-  const from = (location.state as any)?.from?.pathname || '/'
+  const from = (location.state as any)?.from?.pathname
 
   /**
    * 处理表单提交
@@ -42,8 +43,12 @@ const Login: React.FC = () => {
       // 登录成功提示
       showSuccess('登录成功，欢迎回来！')
 
-      // 跳转到目标页面
-      navigate(from, { replace: true })
+      // 根据用户角色跳转到对应的首页
+      // 如果有来源页面且不是登录页，则跳转回来源页面
+      const targetPath =
+        from && from !== '/login' ? from : getDefaultHomePath(activeRole)
+
+      navigate(targetPath, { replace: true })
     } catch (error: any) {
       // 错误处理
       handleError(error, {
