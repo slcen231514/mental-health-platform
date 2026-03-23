@@ -30,7 +30,7 @@ import NotificationCenter from '../components/common/NotificationCenter'
 const { Header, Sider, Content } = Layout
 
 // 用户角色导航菜单
-const userMenuItems = [
+const userNavigationItems = [
   { key: '/', icon: <HomeOutlined />, label: '首页' },
   { key: '/assessment', icon: <FormOutlined />, label: '心理评估' },
   { key: '/dialogue', icon: <MessageOutlined />, label: 'AI对话' },
@@ -39,7 +39,7 @@ const userMenuItems = [
 ]
 
 // 咨询师角色导航菜单
-const counselorMenuItems = [
+const counselorNavigationItems = [
   { key: '/counselor/dashboard', icon: <DashboardOutlined />, label: '工作台' },
   {
     key: '/counselor/appointments',
@@ -53,7 +53,7 @@ const counselorMenuItems = [
 ]
 
 // 管理员角色导航菜单
-const adminMenuItems = [
+const adminNavigationItems = [
   { key: '/admin/dashboard', icon: <DashboardOutlined />, label: '仪表板' },
   { key: '/admin/users', icon: <UsergroupAddOutlined />, label: '用户管理' },
   { key: '/admin/applications', icon: <AuditOutlined />, label: '咨询师审核' },
@@ -74,12 +74,12 @@ export default function MainLayout() {
   const menuItems = useMemo(() => {
     switch (activeRole) {
       case 'ADMIN':
-        return adminMenuItems
+        return adminNavigationItems
       case 'COUNSELOR':
-        return counselorMenuItems
+        return counselorNavigationItems
       case 'USER':
       default:
-        return userMenuItems
+        return userNavigationItems
     }
   }, [activeRole])
 
