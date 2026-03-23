@@ -29,6 +29,13 @@ const Notifications = lazy(() => import('@/pages/Notifications'))
 const Settings = lazy(() => import('@/pages/Settings'))
 const Forbidden = lazy(() => import('@/pages/Forbidden'))
 
+// 咨询师页面
+const CounselorDashboard = lazy(() => import('@/pages/counselor/Dashboard'))
+const CounselorApply = lazy(() => import('@/pages/counselor/Apply'))
+const CounselorApplicationStatus = lazy(
+  () => import('@/pages/counselor/ApplicationStatus')
+)
+
 /**
  * 路由配置
  *
@@ -148,22 +155,48 @@ export const routes: RouteObject[] = [
   },
 
   // 咨询师路由（需要 COUNSELOR 角色）
-  // TODO: 在后续任务中添加咨询师相关页面
-  // {
-  //   path: '/counselor',
-  //   element: (
-  //     <PrivateRoute requiredRoles={['COUNSELOR']}>
-  //       <CounselorLayout />
-  //     </PrivateRoute>
-  //   ),
-  //   children: [
-  //     {
-  //       path: 'dashboard',
-  //       element: <CounselorDashboard />,
-  //     },
-  //     // ... 其他咨询师路由
-  //   ],
-  // },
+  {
+    element: (
+      <PrivateRoute requiredRoles={['COUNSELOR']}>
+        <MainLayout />
+      </PrivateRoute>
+    ),
+    children: [
+      {
+        path: '/counselor/dashboard',
+        element: <CounselorDashboard />,
+      },
+      {
+        path: '/counselor/apply',
+        element: <CounselorApply />,
+      },
+      {
+        path: '/counselor/application-status',
+        element: <CounselorApplicationStatus />,
+      },
+      // TODO: 在后续任务中添加其他咨询师页面
+      // {
+      //   path: '/counselor/schedule',
+      //   element: <CounselorSchedule />,
+      // },
+      // {
+      //   path: '/counselor/appointments',
+      //   element: <CounselorAppointments />,
+      // },
+      // {
+      //   path: '/counselor/records',
+      //   element: <CounselorRecords />,
+      // },
+      // {
+      //   path: '/counselor/income',
+      //   element: <CounselorIncome />,
+      // },
+      // {
+      //   path: '/counselor/profile',
+      //   element: <CounselorProfile />,
+      // },
+    ],
+  },
 
   // 管理员路由（需要 ADMIN 角色）
   // TODO: 在后续任务中添加管理员相关页面
