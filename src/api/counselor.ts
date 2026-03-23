@@ -70,6 +70,7 @@ export interface AppointmentDTO {
   counselorId: number
   counselorName: string
   userId: number
+  userName: string
   date: string
   startTime: string
   endTime: string
@@ -242,6 +243,49 @@ export const counselorApi = {
   ): Promise<ApiResponse<AvailabilityDTO[]>> => {
     return request.get('/counselor/availability', {
       params: { startDate, endDate },
+    })
+  },
+
+  // ==================== 咨询师预约管理 API ====================
+
+  /**
+   * 查询咨询师预约列表
+   * @param status 预约状态
+   * @param startDate 开始日期
+   * @param endDate 结束日期
+   * @returns 预约列表
+   */
+  getCounselorAppointments: (
+    status?: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<ApiResponse<AppointmentDTO[]>> => {
+    return request.get('/counselor/appointments', {
+      params: { status, startDate, endDate },
+    })
+  },
+
+  /**
+   * 确认预约
+   * @param appointmentId 预约ID
+   * @returns 确认结果
+   */
+  confirmAppointment: (appointmentId: number): Promise<ApiResponse<void>> => {
+    return request.post(`/counselor/appointments/${appointmentId}/confirm`)
+  },
+
+  /**
+   * 拒绝预约
+   * @param appointmentId 预约ID
+   * @param reason 拒绝原因
+   * @returns 拒绝结果
+   */
+  rejectAppointment: (
+    appointmentId: number,
+    reason: string
+  ): Promise<ApiResponse<void>> => {
+    return request.post(`/counselor/appointments/${appointmentId}/reject`, {
+      reason,
     })
   },
 }
