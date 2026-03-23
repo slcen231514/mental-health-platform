@@ -59,6 +59,7 @@ const CounselorList: React.FC = () => {
     try {
       setLoading(true)
       const response = await counselorApi.matchCounselors(filters)
+      // 只显示ACTIVE和APPROVED的咨询师（后端应该已经过滤）
       setCounselors(response.data)
     } catch (error) {
       message.error('加载咨询师列表失败')
@@ -95,14 +96,16 @@ const CounselorList: React.FC = () => {
       isOnline: undefined,
     })
     setSearchText('')
+    setCurrentPage(1)
   }
 
   // 应用筛选
   const handleApplyFilters = () => {
+    setCurrentPage(1)
     loadCounselors()
   }
 
-  // 过滤咨询师（本地搜索）
+  // 过滤咨询师（本地搜索 - 按姓名）
   const filteredCounselors = counselors.filter(counselor => {
     if (searchText) {
       const searchLower = searchText.toLowerCase()
@@ -139,11 +142,11 @@ const CounselorList: React.FC = () => {
       {/* 搜索和筛选区域 */}
       <Card className="mb-6">
         <div className="space-y-4">
-          {/* 搜索框 */}
+          {/* 搜索框 - 咨询师姓名搜索 */}
           <div>
             <Input
               size="large"
-              placeholder="搜索咨询师姓名、专长..."
+              placeholder="搜索咨询师姓名..."
               prefix={<SearchOutlined />}
               value={searchText}
               onChange={e => setSearchText(e.target.value)}
@@ -154,7 +157,7 @@ const CounselorList: React.FC = () => {
 
           {/* 筛选条件 */}
           <Row gutter={[16, 16]}>
-            {/* 专长筛选 */}
+            {/* 专长领域筛选 */}
             <Col xs={24} sm={12} md={8}>
               <div className="space-y-2">
                 <label className="text-sm font-medium">专长领域</label>
@@ -196,7 +199,7 @@ const CounselorList: React.FC = () => {
               </div>
             </Col>
 
-            {/* 价格筛选 */}
+            {/* 价格范围筛选 */}
             <Col xs={24} sm={12} md={8}>
               <div className="space-y-2">
                 <label className="text-sm font-medium">
@@ -264,7 +267,7 @@ const CounselorList: React.FC = () => {
               ))}
             </Row>
 
-            {/* 分页 */}
+            {/* 分页 - 每页12名咨询师 */}
             {filteredCounselors.length > pageSize && (
               <div className="flex justify-center mt-8">
                 <Pagination

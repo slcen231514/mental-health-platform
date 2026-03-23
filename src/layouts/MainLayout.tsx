@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { Layout, Menu, Avatar, Dropdown, Button, Badge, Drawer } from 'antd'
 import {
@@ -13,13 +13,24 @@ import {
   MenuUnfoldOutlined,
   BellOutlined,
   SettingOutlined,
+  DashboardOutlined,
+  CalendarOutlined,
+  FileTextOutlined,
+  DollarOutlined,
+  IdcardOutlined,
+  AuditOutlined,
+  UsergroupAddOutlined,
+  FileSearchOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../store/authStore'
 import { useNotificationStore } from '../store/notificationStore'
+import RoleSwitcher from '../components/common/RoleSwitcher'
+import NotificationCenter from '../components/common/NotificationCenter'
 
 const { Header, Sider, Content } = Layout
 
-const menuItems = [
+// 用户角色导航菜单
+const userMenuItems = [
   { key: '/', icon: <HomeOutlined />, label: '首页' },
   { key: '/assessment', icon: <FormOutlined />, label: '心理评估' },
   { key: '/dialogue', icon: <MessageOutlined />, label: 'AI对话' },
@@ -27,14 +38,50 @@ const menuItems = [
   { key: '/counselor', icon: <TeamOutlined />, label: '咨询师' },
 ]
 
+// 咨询师角色导航菜单
+const counselorMenuItems = [
+  { key: '/counselor/dashboard', icon: <DashboardOutlined />, label: '工作台' },
+  {
+    key: '/counselor/appointments',
+    icon: <CalendarOutlined />,
+    label: '我的预约',
+  },
+  { key: '/counselor/schedule', icon: <CalendarOutlined />, label: '时间表' },
+  { key: '/counselor/records', icon: <FileTextOutlined />, label: '咨询记录' },
+  { key: '/counselor/income', icon: <DollarOutlined />, label: '收入统计' },
+  { key: '/counselor/profile', icon: <IdcardOutlined />, label: '个人资料' },
+]
+
+// 管理员角色导航菜单
+const adminMenuItems = [
+  { key: '/admin/dashboard', icon: <DashboardOutlined />, label: '仪表板' },
+  { key: '/admin/users', icon: <UsergroupAddOutlined />, label: '用户管理' },
+  { key: '/admin/applications', icon: <AuditOutlined />, label: '咨询师审核' },
+  { key: '/admin/logs', icon: <FileSearchOutlined />, label: '系统日志' },
+]
+
 export default function MainLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileDrawerVisible, setMobileDrawerVisible] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [notificationVisible, setNotificationVisible] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, logout } = useAuthStore()
+  const { user, activeRole, logout } = useAuthStore()
   const { unreadCount, fetchUnreadCount } = useNotificationStore()
+
+  // 根据当前活动角色选择导航菜单
+  const menuItems = useMemo(() => {
+    switch (activeRole) {
+      case 'ADMIN':
+        return adminMenuItems
+      case 'COUNSELOR':
+        return counselorMenuItems
+      case 'USER':
+      default:
+        return userMenuItems
+    }
+  }, [activeRole])
 
   // 检测屏幕尺寸
   useEffect(() => {
@@ -166,14 +213,19 @@ export default function MainLayout() {
             }}
           />
           <div className="flex items-center gap-2 md:gap-4">
+            {/* 角色切换组件 */}
+            <RoleSwitcher />
+
+            {/* 通知中心按钮 */}
             <Badge count={unreadCount} offset={[-5, 5]}>
               <Button
                 type="text"
                 icon={<BellOutlined className="text-lg" />}
-                onClick={() => navigate('/notifications')}
+                onClick={() => setNotificationVisible(true)}
                 className="flex items-center justify-center"
               />
             </Badge>
+
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
               <div className="flex items-center cursor-pointer hover:bg-gray-100 px-2 md:px-3 py-1 rounded">
                 <Avatar
@@ -194,6 +246,12 @@ export default function MainLayout() {
           <Outlet />
         </Content>
       </Layout>
+
+      {/* 通知中心抽屉 */}
+      <NotificationCenter
+        visible={notificationVisible}
+        onClose={() => setNotificationVisible(false)}
+      />
     </Layout>
   )
 }
