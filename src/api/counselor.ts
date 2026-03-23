@@ -86,6 +86,22 @@ export interface VideoSessionDTO {
   expiresAt: string
 }
 
+// ==================== 咨询师时间表管理类型 ====================
+
+export interface AvailabilityDTO {
+  availabilityId: number
+  date: string
+  startTime: string
+  endTime: string
+  isBooked: boolean
+}
+
+export interface AddAvailabilityRequest {
+  date: string
+  startTime: string
+  endTime: string
+}
+
 // ==================== Counselor API ====================
 
 export const counselorApi = {
@@ -189,6 +205,43 @@ export const counselorApi = {
   ): Promise<ApiResponse<AppointmentDTO[]>> => {
     return request.get('/counselor/appointments', {
       params: { status },
+    })
+  },
+
+  // ==================== 咨询师时间表管理 API ====================
+
+  /**
+   * 添加可预约时段
+   * @param availabilityRequest 时段信息
+   * @returns 添加结果
+   */
+  addAvailability: (
+    availabilityRequest: AddAvailabilityRequest
+  ): Promise<ApiResponse<AvailabilityDTO>> => {
+    return request.post('/counselor/availability', availabilityRequest)
+  },
+
+  /**
+   * 删除可预约时段
+   * @param availabilityId 时段ID
+   * @returns 删除结果
+   */
+  deleteAvailability: (availabilityId: number): Promise<ApiResponse<void>> => {
+    return request.delete(`/counselor/availability/${availabilityId}`)
+  },
+
+  /**
+   * 查询时间表
+   * @param startDate 开始日期
+   * @param endDate 结束日期
+   * @returns 时段列表
+   */
+  getAvailability: (
+    startDate: string,
+    endDate: string
+  ): Promise<ApiResponse<AvailabilityDTO[]>> => {
+    return request.get('/counselor/availability', {
+      params: { startDate, endDate },
     })
   },
 }
