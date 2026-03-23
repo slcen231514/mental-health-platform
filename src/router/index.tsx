@@ -45,6 +45,9 @@ const CounselorProfile = lazy(() => import('@/pages/counselor/Profile'))
 
 // 管理员页面
 const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard'))
+const ApplicationReview = lazy(() => import('@/pages/admin/ApplicationReview'))
+const UserManagement = lazy(() => import('@/pages/admin/UserManagement'))
+const SystemLogs = lazy(() => import('@/pages/admin/SystemLogs'))
 
 /**
  * 路由配置
@@ -224,19 +227,18 @@ export const routes: RouteObject[] = [
         path: '/admin/dashboard',
         element: <AdminDashboard />,
       },
-      // TODO: 在后续任务中添加其他管理员页面
-      // {
-      //   path: '/admin/users',
-      //   element: <UserManagement />,
-      // },
-      // {
-      //   path: '/admin/applications',
-      //   element: <ApplicationReview />,
-      // },
-      // {
-      //   path: '/admin/logs',
-      //   element: <SystemLogs />,
-      // },
+      {
+        path: '/admin/applications',
+        element: <ApplicationReview />,
+      },
+      {
+        path: '/admin/users',
+        element: <UserManagement />,
+      },
+      {
+        path: '/admin/logs',
+        element: <SystemLogs />,
+      },
     ],
   },
 
