@@ -14,3 +14,6 @@ export { default as Empty, EmptyTypes } from './Empty'
 export type { EmptyProps } from './Empty'
 
 export { default as RoleSwitcher } from './RoleSwitcher'
+
+export { default as FileUpload } from './FileUpload'
+export type { FileUploadProps } from './FileUpload'

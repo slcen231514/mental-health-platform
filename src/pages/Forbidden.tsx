@@ -12,9 +12,9 @@ const Forbidden: React.FC = () => {
   const location = useLocation()
   const { user, activeRole } = useAuthStore()
 
-  // 获取尝试访问的路径和所需权限
-  const from = (location.state as any)?.from?.pathname || '/'
-  const requiredRole = (location.state as any)?.requiredRole
+  // 获取所需权限
+  const requiredRole = (location.state as { requiredRole?: string })
+    ?.requiredRole
 
   const handleBackHome = () => {
     // 根据用户角色返回对应的首页

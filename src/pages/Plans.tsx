@@ -1,22 +1,7 @@
 import { useEffect, useState } from 'react'
-import {
-  Card,
-  Empty,
-  Spin,
-  Typography,
-  Progress,
-  Tag,
-  Space,
-  Button,
-} from 'antd'
-import {
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  CalendarOutlined,
-  TrophyOutlined,
-} from '@ant-design/icons'
+import { Card, Empty, Spin, Typography, Progress, Space, Button } from 'antd'
+import { TrophyOutlined } from '@ant-design/icons'
 import { interventionApi, InterventionPlan } from '@/api/intervention'
-import dayjs from 'dayjs'
 import PlanCard from '@/components/intervention/PlanCard'
 
 const { Title, Text } = Typography

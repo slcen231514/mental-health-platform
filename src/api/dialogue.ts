@@ -18,7 +18,7 @@ export interface Conversation {
   updatedAt: string
 }
 
-export interface UserProfile {
+export interface DialogueUserProfile {
   keyConcerns: string[]
   emotionalBaseline: string
   lastUpdated: string
@@ -33,34 +33,47 @@ export interface StreamMessage {
 
 export const dialogueApi = {
   createConversation: () =>
-    request.post<any, { data: Conversation }>('/dialogues/conversations'),
-  
+    request.post<unknown, { data: Conversation }>('/dialogues/conversations'),
+
   sendMessage: (conversationId: number, content: string) =>
-    request.post<any, { data: Message }>(`/dialogues/conversations/${conversationId}/messages`, { content }),
-  
+    request.post<unknown, { data: Message }>(
+      `/dialogues/conversations/${conversationId}/messages`,
+      { content }
+    ),
+
   getConversationHistory: (conversationId: number) =>
-    request.get<any, { data: Message[] }>(`/dialogues/conversations/${conversationId}/messages`),
-  
+    request.get<unknown, { data: Message[] }>(
+      `/dialogues/conversations/${conversationId}/messages`
+    ),
+
   getMyConversations: () =>
-    request.get<any, { data: Conversation[] }>('/dialogues/conversations'),
-  
+    request.get<unknown, { data: Conversation[] }>('/dialogues/conversations'),
+
   endConversation: (conversationId: number) =>
-    request.post<any, { data: any }>(`/dialogues/conversations/${conversationId}/end`),
+    request.post<unknown, { data: unknown }>(
+      `/dialogues/conversations/${conversationId}/end`
+    ),
 }
 
 // SerenityMind API functions
-export async function getUserProfile(): Promise<UserProfile> {
-  const response: any = await request.get('/dialogue/profile')
-  return response as UserProfile
+export async function getUserProfile(): Promise<DialogueUserProfile> {
+  const response = (await request.get(
+    '/dialogue/profile'
+  )) as DialogueUserProfile
+  return response
 }
 
-export async function updateUserProfile(profile: UserProfile): Promise<void> {
+export async function updateUserProfile(
+  profile: DialogueUserProfile
+): Promise<void> {
   await request.put('/dialogue/profile', profile)
 }
 
 export async function getOrCreateActiveConversation(): Promise<number> {
-  const response: any = await request.get('/dialogue/conversation/active')
-  return response.id as number
+  const response = (await request.get('/dialogue/conversation/active')) as {
+    id: number
+  }
+  return response.id
 }
 
 export async function sendMessageStream(
@@ -76,8 +89,8 @@ export async function sendMessageStream(
     body: JSON.stringify({
       message,
       mode: 'TEXT',
-      conversationId
-    })
+      conversationId,
+    }),
   })
 
   if (!response.ok) {
@@ -94,6 +107,7 @@ export async function sendMessageStream(
   return new ReadableStream({
     async start(controller) {
       try {
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
@@ -114,6 +128,6 @@ export async function sendMessageStream(
       } catch (error) {
         controller.error(error)
       }
-    }
+    },
   })
 }

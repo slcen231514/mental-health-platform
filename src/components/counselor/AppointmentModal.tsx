@@ -3,7 +3,6 @@ import {
   Modal,
   Form,
   DatePicker,
-  Select,
   Input,
   Radio,
   message,
@@ -20,7 +19,6 @@ import {
 } from '@/api/counselor'
 
 const { TextArea } = Input
-const { Option } = Select
 
 interface AppointmentModalProps {
   visible: boolean
@@ -137,8 +135,9 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
       } else {
         message.error(response.message || '预约失败，请稍后重试')
       }
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      const err = error as { errorFields?: unknown }
+      if (err.errorFields) {
         message.warning('请完善预约信息')
       } else {
         console.error('预约失败:', error)

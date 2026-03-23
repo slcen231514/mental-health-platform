@@ -1,11 +1,5 @@
 import { Suspense } from 'react'
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-  useRoutes,
-} from 'react-router-dom'
+import { BrowserRouter, useRoutes } from 'react-router-dom'
 import { Spin } from 'antd'
 import { routes } from '@/router'
 

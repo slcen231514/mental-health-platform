@@ -57,8 +57,9 @@ export default function Profile() {
       }
 
       message.success('头像上传成功')
-    } catch (error: any) {
-      message.error(error?.message || '头像上传失败')
+    } catch (error: unknown) {
+      const err = error as { message?: string }
+      message.error(err?.message || '头像上传失败')
     } finally {
       setAvatarLoading(false)
     }
@@ -66,10 +67,14 @@ export default function Profile() {
   }
 
   // 处理信息保存
-  const handleSaveProfile = async (values: any) => {
+  const handleSaveProfile = async (values: {
+    phone: string
+    gender: string
+    bio: string
+  }) => {
     try {
       setUpdateLoading(true)
-      const response = await userApi.updateUserProfile({
+      await userApi.updateUserProfile({
         phone: values.phone,
         gender: values.gender,
         bio: values.bio,
@@ -87,15 +92,20 @@ export default function Profile() {
 
       message.success('更新成功')
       setEditMode(false)
-    } catch (error: any) {
-      message.error(error?.message || '更新失败')
+    } catch (error: unknown) {
+      const err = error as { message?: string }
+      message.error(err?.message || '更新失败')
     } finally {
       setUpdateLoading(false)
     }
   }
 
   // 处理密码修改
-  const handleChangePassword = async (values: any) => {
+  const handleChangePassword = async (values: {
+    oldPassword: string
+    newPassword: string
+    confirmPassword: string
+  }) => {
     try {
       setPasswordLoading(true)
       await userApi.changePassword({
@@ -106,8 +116,9 @@ export default function Profile() {
       message.success('密码修改成功')
       setPasswordModalVisible(false)
       passwordForm.resetFields()
-    } catch (error: any) {
-      message.error(error?.message || '密码修改失败')
+    } catch (error: unknown) {
+      const err = error as { message?: string }
+      message.error(err?.message || '密码修改失败')
     } finally {
       setPasswordLoading(false)
     }

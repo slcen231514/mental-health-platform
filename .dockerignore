@@ -3,3 +3,13 @@ dist
 .git
 *.log
 .DS_Store
+.env.local
+.env.development
+.env.production
+coverage
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.cache
