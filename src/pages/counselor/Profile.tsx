@@ -56,6 +56,7 @@ const CounselorProfile: React.FC = () => {
           price: profileData.price,
           education: profileData.education,
           experience: profileData.experience,
+          consultationMethods: '线上、线下', // TODO: Get from backend when available
         })
       } catch (error) {
         console.error('加载资料失败:', error)
@@ -124,9 +125,17 @@ const CounselorProfile: React.FC = () => {
         ? values.specialties.split(/[、,，]/).map((s: string) => s.trim())
         : []
 
+      // 将咨询方式字符串转换为数组
+      const consultationMethods = values.consultationMethods
+        ? values.consultationMethods
+            .split(/[、,，]/)
+            .map((s: string) => s.trim())
+        : []
+
       await counselorApi.updateProfile({
-        introduction: values.introduction,
+        bio: values.introduction,
         specialties,
+        consultationMethods,
         price: values.price,
       })
 
@@ -153,6 +162,7 @@ const CounselorProfile: React.FC = () => {
       form.setFieldsValue({
         specialties: profile.specialties?.join('、') || '',
         introduction: profile.introduction,
+        consultationMethods: '线上、线下', // TODO: Get from backend when available
         price: profile.price,
       })
     }
@@ -265,6 +275,15 @@ const CounselorProfile: React.FC = () => {
             </Form.Item>
 
             <Form.Item
+              label="咨询方式"
+              name="consultationMethods"
+              rules={[{ required: true, message: '请选择咨询方式' }]}
+              extra="多个方式请用顿号（、）或逗号分隔"
+            >
+              <Input placeholder="例如：线上、线下" disabled={!editing} />
+            </Form.Item>
+
+            <Form.Item
               label="个人简介"
               name="introduction"
               rules={[
@@ -300,7 +319,7 @@ const CounselorProfile: React.FC = () => {
                 precision={2}
                 min={0.01}
                 disabled={!editing}
-                addonAfter="元/小时"
+                suffix="元/小时"
               />
             </Form.Item>
 

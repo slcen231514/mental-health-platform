@@ -435,8 +435,9 @@ export const counselorApi = {
    * @returns 更新结果
    */
   updateProfile: (profileData: {
-    introduction?: string
+    bio?: string
     specialties?: string[]
+    consultationMethods?: string[]
     price?: number
   }): Promise<ApiResponse<void>> => {
     return request.put('/counselor/profile', profileData)
