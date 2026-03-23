@@ -131,6 +131,30 @@ export interface UpdateConsultationRecordRequest {
   followUpAdvice?: string
 }
 
+// ==================== 收入统计类型 ====================
+
+export interface IncomeStatisticsDTO {
+  currentMonth: {
+    totalIncome: number
+    consultationCount: number
+    averageIncome: number
+  }
+  monthlyTrend: Array<{
+    month: string
+    income: number
+    count: number
+  }>
+}
+
+export interface IncomeDetailDTO {
+  appointmentId: number
+  userId: number
+  userName: string
+  consultationDate: string
+  duration: number
+  amount: number
+}
+
 // ==================== Counselor API ====================
 
 export const counselorApi = {
@@ -360,6 +384,76 @@ export const counselorApi = {
   ): Promise<ApiResponse<ConsultationRecordDTO[]>> => {
     return request.get('/counselor/consultation-records', {
       params: { userId, startDate, endDate },
+    })
+  },
+
+  // ==================== 收入统计 API ====================
+
+  /**
+   * 查询收入统计
+   * @param year 年份
+   * @param month 月份
+   * @returns 收入统计数据
+   */
+  getIncomeStatistics: (
+    year?: number,
+    month?: number
+  ): Promise<ApiResponse<IncomeStatisticsDTO>> => {
+    return request.get('/counselor/income/statistics', {
+      params: { year, month },
+    })
+  },
+
+  /**
+   * 查询收入明细
+   * @param startDate 开始日期
+   * @param endDate 结束日期
+   * @returns 收入明细列表
+   */
+  getIncomeDetails: (
+    startDate?: string,
+    endDate?: string
+  ): Promise<ApiResponse<IncomeDetailDTO[]>> => {
+    return request.get('/counselor/income/details', {
+      params: { startDate, endDate },
+    })
+  },
+
+  // ==================== 咨询师资料管理 API ====================
+
+  /**
+   * 获取咨询师个人资料
+   * @returns 咨询师资料信息
+   */
+  getProfile: (): Promise<ApiResponse<CounselorDetailDTO>> => {
+    return request.get('/counselor/profile')
+  },
+
+  /**
+   * 更新咨询师个人资料
+   * @param profileData 资料信息
+   * @returns 更新结果
+   */
+  updateProfile: (profileData: {
+    introduction?: string
+    specialties?: string[]
+    price?: number
+  }): Promise<ApiResponse<void>> => {
+    return request.put('/counselor/profile', profileData)
+  },
+
+  /**
+   * 上传咨询师头像
+   * @param file 头像文件
+   * @returns 头像URL
+   */
+  uploadAvatar: (file: File): Promise<ApiResponse<{ avatarUrl: string }>> => {
+    const formData = new FormData()
+    formData.append('avatar', file)
+    return request.post('/counselor/profile/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     })
   },
 }
