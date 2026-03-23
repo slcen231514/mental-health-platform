@@ -39,6 +39,7 @@ const CounselorSchedule = lazy(() => import('@/pages/counselor/Schedule'))
 const CounselorAppointments = lazy(
   () => import('@/pages/counselor/Appointments')
 )
+const CounselorRecords = lazy(() => import('@/pages/counselor/Records'))
 
 /**
  * 路由配置
@@ -186,11 +187,11 @@ export const routes: RouteObject[] = [
         path: '/counselor/appointments',
         element: <CounselorAppointments />,
       },
+      {
+        path: '/counselor/records',
+        element: <CounselorRecords />,
+      },
       // TODO: 在后续任务中添加其他咨询师页面
-      // {
-      //   path: '/counselor/records',
-      //   element: <CounselorRecords />,
-      // },
       // {
       //   path: '/counselor/income',
       //   element: <CounselorIncome />,

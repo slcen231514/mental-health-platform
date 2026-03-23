@@ -103,6 +103,34 @@ export interface AddAvailabilityRequest {
   endTime: string
 }
 
+// ==================== 咨询记录管理类型 ====================
+
+export interface ConsultationRecordDTO {
+  recordId: number
+  appointmentId: number
+  userId: number
+  userName: string
+  consultationDate: string
+  duration: number
+  summary: string
+  followUpAdvice?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateConsultationRecordRequest {
+  appointmentId: number
+  consultationDate: string
+  duration: number
+  summary: string
+  followUpAdvice?: string
+}
+
+export interface UpdateConsultationRecordRequest {
+  summary: string
+  followUpAdvice?: string
+}
+
 // ==================== Counselor API ====================
 
 export const counselorApi = {
@@ -286,6 +314,52 @@ export const counselorApi = {
   ): Promise<ApiResponse<void>> => {
     return request.post(`/counselor/appointments/${appointmentId}/reject`, {
       reason,
+    })
+  },
+
+  // ==================== 咨询记录管理 API ====================
+
+  /**
+   * 创建咨询记录
+   * @param recordRequest 咨询记录信息
+   * @returns 创建结果
+   */
+  createConsultationRecord: (
+    recordRequest: CreateConsultationRecordRequest
+  ): Promise<ApiResponse<ConsultationRecordDTO>> => {
+    return request.post('/counselor/consultation-records', recordRequest)
+  },
+
+  /**
+   * 更新咨询记录
+   * @param recordId 记录ID
+   * @param recordRequest 咨询记录信息
+   * @returns 更新结果
+   */
+  updateConsultationRecord: (
+    recordId: number,
+    recordRequest: UpdateConsultationRecordRequest
+  ): Promise<ApiResponse<void>> => {
+    return request.put(
+      `/counselor/consultation-records/${recordId}`,
+      recordRequest
+    )
+  },
+
+  /**
+   * 查询咨询记录列表
+   * @param userId 用户ID
+   * @param startDate 开始日期
+   * @param endDate 结束日期
+   * @returns 咨询记录列表
+   */
+  getConsultationRecords: (
+    userId?: number,
+    startDate?: string,
+    endDate?: string
+  ): Promise<ApiResponse<ConsultationRecordDTO[]>> => {
+    return request.get('/counselor/consultation-records', {
+      params: { userId, startDate, endDate },
     })
   },
 }
