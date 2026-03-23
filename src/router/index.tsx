@@ -43,6 +43,9 @@ const CounselorRecords = lazy(() => import('@/pages/counselor/Records'))
 const CounselorIncome = lazy(() => import('@/pages/counselor/Income'))
 const CounselorProfile = lazy(() => import('@/pages/counselor/Profile'))
 
+// 管理员页面
+const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard'))
+
 /**
  * 路由配置
  *
@@ -210,22 +213,32 @@ export const routes: RouteObject[] = [
   },
 
   // 管理员路由（需要 ADMIN 角色）
-  // TODO: 在后续任务中添加管理员相关页面
-  // {
-  //   path: '/admin',
-  //   element: (
-  //     <PrivateRoute requiredRoles={['ADMIN']}>
-  //       <AdminLayout />
-  //     </PrivateRoute>
-  //   ),
-  //   children: [
-  //     {
-  //       path: 'dashboard',
-  //       element: <AdminDashboard />,
-  //     },
-  //     // ... 其他管理员路由
-  //   ],
-  // },
+  {
+    element: (
+      <PrivateRoute requiredRoles={['ADMIN']}>
+        <MainLayout />
+      </PrivateRoute>
+    ),
+    children: [
+      {
+        path: '/admin/dashboard',
+        element: <AdminDashboard />,
+      },
+      // TODO: 在后续任务中添加其他管理员页面
+      // {
+      //   path: '/admin/users',
+      //   element: <UserManagement />,
+      // },
+      // {
+      //   path: '/admin/applications',
+      //   element: <ApplicationReview />,
+      // },
+      // {
+      //   path: '/admin/logs',
+      //   element: <SystemLogs />,
+      // },
+    ],
+  },
 
   // 403 禁止访问页面
   {
