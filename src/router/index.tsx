@@ -28,6 +28,7 @@ const Profile = lazy(() => import('@/pages/Profile'))
 const Notifications = lazy(() => import('@/pages/Notifications'))
 const Settings = lazy(() => import('@/pages/Settings'))
 const Forbidden = lazy(() => import('@/pages/Forbidden'))
+const ArticleDetail = lazy(() => import('@/pages/content/ArticleDetail'))
 
 // 咨询师页面
 const CounselorDashboard = lazy(() => import('@/pages/counselor/Dashboard'))
@@ -48,6 +49,7 @@ const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard'))
 const ApplicationReview = lazy(() => import('@/pages/admin/ApplicationReview'))
 const UserManagement = lazy(() => import('@/pages/admin/UserManagement'))
 const SystemLogs = lazy(() => import('@/pages/admin/SystemLogs'))
+const ContentManagement = lazy(() => import('@/pages/admin/ContentManagement'))
 
 /**
  * 路由配置
@@ -164,6 +166,19 @@ export const routes: RouteObject[] = [
         path: '/settings',
         element: <Settings />,
       },
+      {
+        path: '/content/:id',
+        element: <ArticleDetail />,
+      },
+      // 咨询师申请页面（所有登录用户都可以访问）
+      {
+        path: '/counselor/apply',
+        element: <CounselorApply />,
+      },
+      {
+        path: '/counselor/application-status',
+        element: <CounselorApplicationStatus />,
+      },
     ],
   },
 
@@ -178,14 +193,6 @@ export const routes: RouteObject[] = [
       {
         path: '/counselor/dashboard',
         element: <CounselorDashboard />,
-      },
-      {
-        path: '/counselor/apply',
-        element: <CounselorApply />,
-      },
-      {
-        path: '/counselor/application-status',
-        element: <CounselorApplicationStatus />,
       },
       {
         path: '/counselor/schedule',
@@ -238,6 +245,10 @@ export const routes: RouteObject[] = [
       {
         path: '/admin/logs',
         element: <SystemLogs />,
+      },
+      {
+        path: '/admin/content',
+        element: <ContentManagement />,
       },
     ],
   },

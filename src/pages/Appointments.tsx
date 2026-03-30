@@ -1,60 +1,60 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
-  Card,
-  List,
-  Tag,
+  Avatar,
   Button,
+  Card,
+  Descriptions,
   Empty,
-  Spin,
+  Input,
+  List,
   message,
   Modal,
-  Input,
-  Tabs,
   Space,
-  Avatar,
-  Descriptions,
+  Spin,
+  Tabs,
+  Tag,
 } from 'antd'
 import {
   CalendarOutlined,
-  ClockCircleOutlined,
-  UserOutlined,
-  ExclamationCircleOutlined,
   CheckCircleOutlined,
+  ClockCircleOutlined,
   CloseCircleOutlined,
+  ExclamationCircleOutlined,
+  UserOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
-import { counselorApi, AppointmentDTO } from '@/api/counselor'
 import dayjs from 'dayjs'
+import {
+  AppointmentDTO,
+  counselorApi,
+  normalizeAppointment,
+} from '@/api/counselor'
 
 const { TextArea } = Input
-const { TabPane } = Tabs
 
-/**
- * 预约管理页面
- */
 const Appointments: React.FC = () => {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [appointments, setAppointments] = useState<AppointmentDTO[]>([])
-  const [activeTab, setActiveTab] = useState<string>('ALL')
+  const [activeTab, setActiveTab] = useState('ALL')
   const [cancelModalVisible, setCancelModalVisible] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const [selectedAppointment, setSelectedAppointment] =
     useState<AppointmentDTO | null>(null)
   const [cancelLoading, setCancelLoading] = useState(false)
 
-  // 加载预约列表
-  useEffect(() => {
-    loadAppointments()
-  }, [])
-
   const loadAppointments = async (status?: string) => {
     try {
       setLoading(true)
       const response = await counselorApi.getUserAppointments(status)
 
-      if (response.code === 200 && response.data) {
-        setAppointments(response.data)
+      if (
+        ((response as any).success || response.code === 200) &&
+        response.data
+      ) {
+        setAppointments(
+          (((response.data as any) || []) as any[]).map(normalizeAppointment)
+        )
       } else {
         message.error(response.message || '加载预约列表失败')
       }
@@ -66,21 +66,21 @@ const Appointments: React.FC = () => {
     }
   }
 
-  // 切换标签页
+  useEffect(() => {
+    loadAppointments()
+  }, [])
+
   const handleTabChange = (key: string) => {
     setActiveTab(key)
-    const status = key === 'ALL' ? undefined : key
-    loadAppointments(status)
+    loadAppointments(key === 'ALL' ? undefined : key)
   }
 
-  // 打开取消预约对话框
   const handleCancelClick = (appointment: AppointmentDTO) => {
     setSelectedAppointment(appointment)
     setCancelReason('')
     setCancelModalVisible(true)
   }
 
-  // 确认取消预约
   const handleConfirmCancel = async () => {
     if (!selectedAppointment) return
 
@@ -96,7 +96,7 @@ const Appointments: React.FC = () => {
         cancelReason
       )
 
-      if (response.code === 200) {
+      if ((response as any).success || response.code === 200) {
         message.success('预约已取消')
         setCancelModalVisible(false)
         loadAppointments(activeTab === 'ALL' ? undefined : activeTab)
@@ -111,15 +111,13 @@ const Appointments: React.FC = () => {
     }
   }
 
-  // 查看咨询师详情
   const handleViewCounselor = (counselorId: number) => {
     navigate(`/counselor/${counselorId}`)
   }
 
-  // 获取状态标签
-  const getStatusTag = (status: string) => {
-    const statusConfig: Record<
-      string,
+  const getStatusTag = (status: AppointmentDTO['status']) => {
+    const config: Record<
+      AppointmentDTO['status'],
       { color: string; icon: React.ReactNode; text: string }
     > = {
       PENDING: {
@@ -144,29 +142,17 @@ const Appointments: React.FC = () => {
       },
     }
 
-    const config = statusConfig[status] || statusConfig.PENDING
-
     return (
-      <Tag color={config.color} icon={config.icon}>
-        {config.text}
+      <Tag color={config[status].color} icon={config[status].icon}>
+        {config[status].text}
       </Tag>
     )
   }
 
-  // 获取咨询方式标签
-  const getConsultationTypeTag = (type: string) => {
-    return type === 'ONLINE' ? (
-      <Tag color="blue">在线咨询</Tag>
-    ) : (
-      <Tag color="green">线下咨询</Tag>
-    )
-  }
-
-  // 过滤预约列表
   const filteredAppointments =
     activeTab === 'ALL'
       ? appointments
-      : appointments.filter(apt => apt.status === activeTab)
+      : appointments.filter(appointment => appointment.status === activeTab)
 
   return (
     <div className="appointments-page p-6 max-w-7xl mx-auto">
@@ -178,13 +164,17 @@ const Appointments: React.FC = () => {
           </Space>
         }
       >
-        <Tabs activeKey={activeTab} onChange={handleTabChange}>
-          <TabPane tab="全部" key="ALL" />
-          <TabPane tab="待确认" key="PENDING" />
-          <TabPane tab="已确认" key="CONFIRMED" />
-          <TabPane tab="已完成" key="COMPLETED" />
-          <TabPane tab="已取消" key="CANCELLED" />
-        </Tabs>
+        <Tabs
+          activeKey={activeTab}
+          onChange={handleTabChange}
+          items={[
+            { key: 'ALL', label: '全部' },
+            { key: 'PENDING', label: '待确认' },
+            { key: 'CONFIRMED', label: '已确认' },
+            { key: 'COMPLETED', label: '已完成' },
+            { key: 'CANCELLED', label: '已取消' },
+          ]}
+        />
 
         <Spin spinning={loading}>
           {filteredAppointments.length > 0 ? (
@@ -216,14 +206,19 @@ const Appointments: React.FC = () => {
                   ].filter(Boolean)}
                 >
                   <List.Item.Meta
-                    avatar={<Avatar size={64} icon={<UserOutlined />} />}
+                    avatar={
+                      <Avatar
+                        size={64}
+                        src={appointment.counselorAvatarUrl}
+                        icon={<UserOutlined />}
+                      />
+                    }
                     title={
-                      <Space>
+                      <Space wrap>
                         <span className="text-lg font-semibold">
-                          {appointment.counselorName}
+                          {appointment.counselorName || '咨询师'}
                         </span>
                         {getStatusTag(appointment.status)}
-                        {getConsultationTypeTag(appointment.consultationType)}
                       </Space>
                     }
                     description={
@@ -237,7 +232,9 @@ const Appointments: React.FC = () => {
                               </Space>
                             }
                           >
-                            {dayjs(appointment.date).format('YYYY年MM月DD日')}
+                            {appointment.date
+                              ? dayjs(appointment.date).format('YYYY年MM月DD日')
+                              : '-'}
                           </Descriptions.Item>
                           <Descriptions.Item
                             label={
@@ -247,17 +244,36 @@ const Appointments: React.FC = () => {
                               </Space>
                             }
                           >
-                            {appointment.startTime} - {appointment.endTime}
+                            {appointment.startTime && appointment.endTime
+                              ? `${appointment.startTime} - ${appointment.endTime}`
+                              : '-'}
                           </Descriptions.Item>
                           {appointment.notes && (
                             <Descriptions.Item label="备注信息">
                               {appointment.notes}
                             </Descriptions.Item>
                           )}
+                          {appointment.consultationRecord && (
+                            <Descriptions.Item label="咨询反馈">
+                              {appointment.consultationRecord}
+                            </Descriptions.Item>
+                          )}
+                          {appointment.prescription && (
+                            <Descriptions.Item label="后续建议">
+                              {appointment.prescription}
+                            </Descriptions.Item>
+                          )}
+                          {appointment.cancelReason && (
+                            <Descriptions.Item label="取消原因">
+                              {appointment.cancelReason}
+                            </Descriptions.Item>
+                          )}
                           <Descriptions.Item label="创建时间">
-                            {dayjs(appointment.createdAt).format(
-                              'YYYY-MM-DD HH:mm:ss'
-                            )}
+                            {appointment.createdAt
+                              ? dayjs(appointment.createdAt).format(
+                                  'YYYY-MM-DD HH:mm:ss'
+                                )
+                              : '-'}
                           </Descriptions.Item>
                         </Descriptions>
                       </div>
@@ -269,7 +285,9 @@ const Appointments: React.FC = () => {
           ) : (
             <Empty
               description={
-                activeTab === 'ALL' ? '暂无预约记录' : `暂无${activeTab}的预约`
+                activeTab === 'ALL'
+                  ? '暂无预约记录'
+                  : `暂无${getStatusTag(activeTab as AppointmentDTO['status']).props.children}`
               }
               image={Empty.PRESENTED_IMAGE_SIMPLE}
             />
@@ -277,7 +295,6 @@ const Appointments: React.FC = () => {
         </Spin>
       </Card>
 
-      {/* 取消预约对话框 */}
       <Modal
         title="取消预约"
         open={cancelModalVisible}
@@ -295,10 +312,9 @@ const Appointments: React.FC = () => {
           </p>
           <p className="text-sm text-gray-500">
             预约时间：
-            {selectedAppointment &&
-              `${dayjs(selectedAppointment.date).format('YYYY-MM-DD')} ${
-                selectedAppointment.startTime
-              } - ${selectedAppointment.endTime}`}
+            {selectedAppointment
+              ? `${dayjs(selectedAppointment.date).format('YYYY-MM-DD')} ${selectedAppointment.startTime} - ${selectedAppointment.endTime}`
+              : '-'}
           </p>
         </div>
         <TextArea

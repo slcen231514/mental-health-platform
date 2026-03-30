@@ -8,15 +8,19 @@ import {
   Button,
   Empty,
   Typography,
+  Alert,
+  Space,
 } from 'antd'
 import {
   ClockCircleOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  SwapOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import request from '@/api/request'
 import dayjs from 'dayjs'
+import { useAuthStore } from '@/store/authStore'
 
 const { Title, Paragraph } = Typography
 
@@ -57,12 +61,14 @@ const STATUS_CONFIG: Record<
  * 申请信息接口
  */
 interface ApplicationInfo {
-  id: number
+  applicationId: number
   name: string
   phone: string
-  email: string
   licenseNumber: string
-  specialties: string
+  specialties: string[]
+  yearsOfExperience: number
+  education: string
+  bio?: string
   status: ApplicationStatusType
   reviewComment?: string
   submittedAt: string
@@ -77,6 +83,7 @@ const ApplicationStatus: React.FC = () => {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [application, setApplication] = useState<ApplicationInfo | null>(null)
+  const { hasRole, switchRole, activeRole } = useAuthStore()
 
   /**
    * 加载申请信息
@@ -84,8 +91,13 @@ const ApplicationStatus: React.FC = () => {
   useEffect(() => {
     const fetchApplication = async () => {
       try {
-        const response = await axios.get('/api/counselor/applications/my')
-        setApplication(response.data.data)
+        const response = await request.get<any>(
+          '/counselor/applications/my-application'
+        )
+        const result = response as any
+        if (result.success && result.data) {
+          setApplication(result.data)
+        }
       } catch (error) {
         console.error('加载申请信息失败:', error)
       } finally {
@@ -128,6 +140,22 @@ const ApplicationStatus: React.FC = () => {
 
   const statusConfig = STATUS_CONFIG[application.status]
 
+  // 检查用户是否已有咨询师角色但未激活
+  const hasCounselorRole = hasRole('COUNSELOR')
+  const isCounselorActive = activeRole === 'COUNSELOR'
+  const showRoleSwitchAlert =
+    application.status === 'APPROVED' && hasCounselorRole && !isCounselorActive
+
+  // 处理角色切换
+  const handleSwitchToCounselor = async () => {
+    try {
+      await switchRole('COUNSELOR')
+      navigate('/counselor/dashboard')
+    } catch (error) {
+      console.error('切换角色失败:', error)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
@@ -136,8 +164,32 @@ const ApplicationStatus: React.FC = () => {
             申请状态
           </Title>
           <Paragraph className="text-gray-500 mb-6">
-            申请编号：{application.id}
+            申请编号：{application.applicationId}
           </Paragraph>
+
+          {/* 角色切换提示 */}
+          {showRoleSwitchAlert && (
+            <Alert
+              message="恭喜！您已成为认证咨询师"
+              description={
+                <Space direction="vertical" size="small">
+                  <div>
+                    您的咨询师申请已通过审核，现在可以切换到咨询师角色开始工作。
+                  </div>
+                  <Button
+                    type="primary"
+                    icon={<SwapOutlined />}
+                    onClick={handleSwitchToCounselor}
+                  >
+                    切换到咨询师角色
+                  </Button>
+                </Space>
+              }
+              type="success"
+              showIcon
+              className="mb-6"
+            />
+          )}
 
           {/* 申请状态 */}
           <div className="mb-8 p-6 bg-gray-50 rounded-lg">
@@ -155,7 +207,7 @@ const ApplicationStatus: React.FC = () => {
               {application.status === 'PENDING' && (
                 <div className="text-right">
                   <div className="text-gray-600 mb-2">预计审核时间</div>
-                  <div className="text-lg font-semibold">3-5个工作日</div>
+                  <div className="text-lg font-semibold">1-3个工作日</div>
                 </div>
               )}
             </div>
@@ -169,15 +221,25 @@ const ApplicationStatus: React.FC = () => {
             <Descriptions.Item label="联系电话">
               {application.phone}
             </Descriptions.Item>
-            <Descriptions.Item label="电子邮箱">
-              {application.email}
-            </Descriptions.Item>
-            <Descriptions.Item label="执业证书编号">
+            <Descriptions.Item label="执业证书编号" span={2}>
               {application.licenseNumber}
             </Descriptions.Item>
-            <Descriptions.Item label="专长领域" span={2}>
-              {application.specialties}
+            <Descriptions.Item label="工作经验">
+              {application.yearsOfExperience} 年
             </Descriptions.Item>
+            <Descriptions.Item label="教育背景">
+              {application.education}
+            </Descriptions.Item>
+            <Descriptions.Item label="专长领域" span={2}>
+              {Array.isArray(application.specialties)
+                ? application.specialties.join('、')
+                : application.specialties}
+            </Descriptions.Item>
+            {application.bio && (
+              <Descriptions.Item label="个人简介" span={2}>
+                {application.bio}
+              </Descriptions.Item>
+            )}
             <Descriptions.Item label="提交时间" span={2}>
               {dayjs(application.submittedAt).format('YYYY-MM-DD HH:mm:ss')}
             </Descriptions.Item>
@@ -261,13 +323,27 @@ const ApplicationStatus: React.FC = () => {
           {/* 操作按钮 */}
           <div className="text-center">
             {application.status === 'APPROVED' && (
-              <Button
-                type="primary"
-                size="large"
-                onClick={() => navigate('/counselor/dashboard')}
-              >
-                进入咨询师工作台
-              </Button>
+              <Space size="large">
+                {!isCounselorActive && (
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={<SwapOutlined />}
+                    onClick={handleSwitchToCounselor}
+                  >
+                    切换到咨询师角色
+                  </Button>
+                )}
+                {isCounselorActive && (
+                  <Button
+                    type="primary"
+                    size="large"
+                    onClick={() => navigate('/counselor/dashboard')}
+                  >
+                    进入咨询师工作台
+                  </Button>
+                )}
+              </Space>
             )}
             {application.status === 'REJECTED' && (
               <Button

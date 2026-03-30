@@ -119,7 +119,21 @@ export default function CBT() {
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true)
-      const values = await form.validateFields()
+      const allFields: (keyof CBTFormData)[] = [
+        'situation',
+        'automaticThought',
+        'emotionBefore',
+        'evidence',
+        'cognitiveDistortion',
+        'alternativeThought',
+        'emotionAfter',
+      ]
+      await form.validateFields(allFields)
+      const values = form.getFieldsValue(true) as CBTFormData
+
+      // 确保情绪值存在，如果不存在则使用默认值5
+      const emotionBefore = values.emotionBefore ?? 5
+      const emotionAfter = values.emotionAfter ?? 5
 
       await interventionApi.submitCbtSession({
         exerciseType: 'THOUGHT_RECORD',
@@ -129,15 +143,15 @@ export default function CBT() {
           evidence: values.evidence,
           cognitiveDistortion: values.cognitiveDistortion,
           alternativeThought: values.alternativeThought,
-          emotionBefore: values.emotionBefore.toString(),
-          emotionAfter: values.emotionAfter.toString(),
+          emotionBefore: emotionBefore.toString(),
+          emotionAfter: emotionAfter.toString(),
         },
       })
 
       message.success('CBT练习提交成功！')
 
       // 计算情绪改善
-      const improvement = values.emotionBefore - values.emotionAfter
+      const improvement = emotionBefore - emotionAfter
       if (improvement > 0) {
         message.info(`您的情绪改善了 ${improvement} 分，继续保持！`)
       }
@@ -360,6 +374,10 @@ export default function CBT() {
       <Paragraph type="secondary" className="mb-6">
         通过系统化的思维记录，识别和改变负面思维模式
       </Paragraph>
+
+      <div className="mb-4">
+        <Button onClick={() => navigate('/cbt/history')}>查看历史</Button>
+      </div>
 
       <Card>
         <Steps current={currentStep} items={steps} className="mb-8" />

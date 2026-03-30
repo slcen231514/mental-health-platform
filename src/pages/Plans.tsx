@@ -1,14 +1,26 @@
 import { useEffect, useState } from 'react'
-import { Card, Empty, Spin, Typography, Progress, Space, Button } from 'antd'
+import {
+  Card,
+  Empty,
+  Spin,
+  Typography,
+  Progress,
+  Space,
+  Button,
+  message,
+} from 'antd'
 import { TrophyOutlined } from '@ant-design/icons'
 import { interventionApi, InterventionPlan } from '@/api/intervention'
 import PlanCard from '@/components/intervention/PlanCard'
+import { useNavigate } from 'react-router-dom'
 
 const { Title, Text } = Typography
 
 export default function Plans() {
+  const navigate = useNavigate()
   const [plans, setPlans] = useState<InterventionPlan[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
 
   useEffect(() => {
     fetchPlans()
@@ -33,6 +45,31 @@ export default function Plans() {
       fetchPlans()
     } catch (error) {
       console.error('标记任务完成失败:', error)
+    }
+  }
+
+  const handleCreatePlan = async () => {
+    try {
+      setIsCreating(true)
+      // 调用生成计划的 API
+      await interventionApi.generatePlan()
+      message.success('干预计划创建成功！')
+      // 重新获取计划列表
+      await fetchPlans()
+    } catch (error: any) {
+      console.error('创建干预计划失败:', error)
+      const errorMsg =
+        error?.response?.data?.message || '创建失败，请先完成心理评估'
+      message.error(errorMsg)
+
+      // 如果是因为没有评估结果，引导用户去评估
+      if (errorMsg.includes('评估')) {
+        setTimeout(() => {
+          navigate('/assessment')
+        }, 2000)
+      }
+    } finally {
+      setIsCreating(false)
     }
   }
 
@@ -95,10 +132,26 @@ export default function Plans() {
         {plans.length === 0 ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="暂无干预计划"
+            description={
+              <Space direction="vertical">
+                <Text>暂无干预计划</Text>
+                <Text type="secondary">
+                  完成心理评估后可自动生成个性化干预计划
+                </Text>
+              </Space>
+            }
             className="py-16"
           >
-            <Button type="primary">创建计划</Button>
+            <Space>
+              <Button
+                type="primary"
+                onClick={handleCreatePlan}
+                loading={isCreating}
+              >
+                创建计划
+              </Button>
+              <Button onClick={() => navigate('/assessment')}>去评估</Button>
+            </Space>
           </Empty>
         ) : (
           <Space direction="vertical" size="large" className="w-full">

@@ -43,7 +43,10 @@ const Schedule: React.FC = () => {
       const endDate = dayjs().add(30, 'day').format('YYYY-MM-DD')
 
       const response = await counselorApi.getAvailability(startDate, endDate)
-      if (response.code === 200 && response.data) {
+      if (
+        ((response as any).success || response.code === 200) &&
+        response.data
+      ) {
         setAvailabilities(response.data)
       }
     } catch (error) {
@@ -165,7 +168,7 @@ const Schedule: React.FC = () => {
         endTime: endTime!.format('HH:mm'),
       })
 
-      if (response.code === 200) {
+      if ((response as any).success || response.code === 200) {
         message.success('时段添加成功')
         setIsModalVisible(false)
         await loadAvailabilities()
@@ -197,7 +200,7 @@ const Schedule: React.FC = () => {
     setLoading(true)
     try {
       const response = await counselorApi.deleteAvailability(availabilityId)
-      if (response.code === 200) {
+      if ((response as any).success || response.code === 200) {
         message.success('时段删除成功')
         await loadAvailabilities()
       } else {

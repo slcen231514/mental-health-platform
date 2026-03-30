@@ -39,6 +39,24 @@ export interface CBTSession {
   }
 }
 
+export interface CBTHistory {
+  id: number
+  userId: number
+  exerciseType: string
+  status: string
+  createdAt: string
+  completedAt?: string
+  responses: {
+    situation: string
+    automaticThought: string
+    evidence: string
+    cognitiveDistortion: string
+    alternativeThought: string
+    emotionBefore: string
+    emotionAfter: string
+  }
+}
+
 export interface Diary {
   id: number
   userId: number
@@ -51,6 +69,7 @@ export interface Diary {
 export interface SleepRecord {
   id: number
   userId: number
+  sleepDate: string
   sleepTime: string
   wakeTime: string
   quality: number
@@ -73,8 +92,15 @@ export const interventionApi = {
   getPlanById: (id: number) =>
     request.get<any, { data: InterventionPlan }>(`/interventions/plans/${id}`),
 
-  completeTask: (planId: number, taskId: number) =>
-    request.post(`/interventions/plans/${planId}/tasks/${taskId}/complete`),
+  generatePlan: () =>
+    request.post<any, { data: InterventionPlan }>(
+      '/interventions/plan/generate'
+    ),
+
+  completeTask: (_planId: number, taskId: number) =>
+    request.put(`/interventions/tasks/${taskId}/progress`, {
+      status: 'COMPLETED',
+    }),
 
   // 情绪日记
   saveDiary: (data: {
@@ -109,21 +135,27 @@ export const interventionApi = {
   }) => request.post<any, { data: CBTSession }>('/interventions/cbt', data),
 
   getCbtHistory: (params?: { page?: number; size?: number }) =>
-    request.get<
-      any,
-      { data: { content: CBTSession[]; totalElements: number } }
-    >('/interventions/cbt/history', { params }),
+    request.get<any, { data: { records: CBTHistory[]; total: number } }>(
+      '/interventions/cbt/history',
+      { params }
+    ),
 
   // 冥想记录
   recordMeditation: (data: { type: string; duration: number }) =>
-    request.post<any, { data: MeditationRecord }>(
-      '/interventions/meditation',
-      data
+    request.post<any, { data: null }>(
+      '/interventions/meditation/records',
+      null,
+      {
+        params: {
+          meditationType: data.type,
+          duration: data.duration,
+        },
+      }
     ),
 
   getMeditationHistory: (params?: { page?: number; size?: number }) =>
-    request.get<
-      any,
-      { data: { content: MeditationRecord[]; totalElements: number } }
-    >('/interventions/meditation/history', { params }),
+    request.get<any, { data: { records: MeditationRecord[]; total: number } }>(
+      '/interventions/meditation/history',
+      { params }
+    ),
 }

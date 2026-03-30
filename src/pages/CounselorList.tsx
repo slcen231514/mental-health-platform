@@ -110,11 +110,11 @@ const CounselorList: React.FC = () => {
     if (searchText) {
       const searchLower = searchText.toLowerCase()
       return (
-        counselor.name.toLowerCase().includes(searchLower) ||
-        counselor.specialties.some(s =>
-          s.toLowerCase().includes(searchLower)
+        counselor.name?.toLowerCase().includes(searchLower) ||
+        counselor.specialties?.some(s =>
+          s?.toLowerCase().includes(searchLower)
         ) ||
-        counselor.introduction.toLowerCase().includes(searchLower)
+        counselor.introduction?.toLowerCase().includes(searchLower)
       )
     }
     return true

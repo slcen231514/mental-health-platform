@@ -101,7 +101,7 @@ const CounselorDetail: React.FC = () => {
             <div className="text-center mb-6">
               <Avatar
                 size={120}
-                src={counselor.avatar}
+                src={counselor.avatarUrl}
                 icon={<UserOutlined />}
                 className="mb-4"
               />
@@ -223,9 +223,7 @@ const CounselorDetail: React.FC = () => {
           {/* 工作经验 */}
           {counselor.experience && (
             <Card title="工作经验" className="mb-6">
-              <p className="text-gray-700 whitespace-pre-wrap">
-                {counselor.experience}
-              </p>
+              <p className="text-gray-700">从业 {counselor.experience} 年</p>
             </Card>
           )}
 

@@ -65,7 +65,10 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
         dateStr
       )
 
-      if (response.code === 200 && response.data) {
+      if (
+        ((response as any).success || response.code === 200) &&
+        response.data
+      ) {
         setAvailableSlots(response.data)
       } else {
         message.error(response.message || '获取可用时段失败')
@@ -96,7 +99,10 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
   // 时段选择处理
   const handleSlotSelect = (slot: TimeSlotDTO) => {
     setSelectedSlot(slot)
-    form.setFieldValue('timeSlot', `${slot.startTime}-${slot.endTime}`)
+    form.setFieldValue(
+      'timeSlot',
+      `${formatSlotTime(slot.startTime)}-${formatSlotTime(slot.endTime)}`
+    )
   }
 
   // 禁用过去的日期
@@ -104,10 +110,12 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
     return current && current < dayjs().startOf('day')
   }
 
+  const formatSlotTime = (time: string) => dayjs(time).format('HH:mm')
+
   // 提交预约
   const handleSubmit = async () => {
     try {
-      const values = await form.validateFields()
+      await form.validateFields()
 
       if (!selectedDate || !selectedSlot) {
         message.warning('请选择预约日期和时间')
@@ -118,16 +126,16 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
 
       const appointmentRequest: CreateAppointmentRequest = {
         counselorId,
-        date: selectedDate.format('YYYY-MM-DD'),
-        startTime: selectedSlot.startTime,
-        endTime: selectedSlot.endTime,
-        consultationType: values.consultationType,
-        notes: values.notes,
+        appointmentTime: selectedSlot.startTime,
+        duration: dayjs(selectedSlot.endTime).diff(
+          dayjs(selectedSlot.startTime),
+          'minute'
+        ),
       }
 
       const response = await counselorApi.createAppointment(appointmentRequest)
 
-      if (response.code === 200) {
+      if ((response as any).success || response.code === 200) {
         message.success('预约成功！')
         form.resetFields()
         onSuccess()
@@ -221,7 +229,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
                     }}
                     onClick={() => slot.available && handleSlotSelect(slot)}
                   >
-                    {slot.startTime} - {slot.endTime}
+                    {formatSlotTime(slot.startTime)} -{' '}
+                    {formatSlotTime(slot.endTime)}
                     {!slot.available && ' (已预约)'}
                   </Tag>
                 ))}

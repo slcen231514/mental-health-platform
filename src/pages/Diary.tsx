@@ -74,9 +74,11 @@ export default function Diary() {
         page: 0,
         size: 20,
       })
-      setDiaries(response.data.content)
+      // 后端返回的是 PageResult，包含 records 字段
+      setDiaries(response.data.records || [])
     } catch (error) {
       console.error('获取日记失败:', error)
+      setDiaries([]) // 确保出错时也设置为空数组
     } finally {
       setIsLoading(false)
     }

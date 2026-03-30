@@ -1,28 +1,29 @@
 import React, { useEffect, useState } from 'react'
 import {
-  Table,
-  Select,
-  DatePicker,
   Button,
-  Tag,
-  Modal,
+  Card,
+  DatePicker,
   Input,
   message,
-  Card,
+  Modal,
+  Select,
   Space,
+  Table,
+  Tag,
 } from 'antd'
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
-import { counselorApi, AppointmentDTO } from '@/api/counselor'
+import {
+  AppointmentDTO,
+  counselorApi,
+  normalizeAppointment,
+} from '@/api/counselor'
 
 const { RangePicker } = DatePicker
 const { TextArea } = Input
 
-/**
- * 预约状态配置
- */
 const STATUS_CONFIG: Record<
   AppointmentDTO['status'],
   { text: string; color: string }
@@ -33,16 +34,10 @@ const STATUS_CONFIG: Record<
   COMPLETED: { text: '已完成', color: 'green' },
 }
 
-/**
- * 咨询师预约管理页面
- * 需求: 5.1, 5.2, 5.3, 5.4, 5.5, 5.7, 5.8, 12.7
- */
 const Appointments: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [appointments, setAppointments] = useState<AppointmentDTO[]>([])
-  const [statusFilter, setStatusFilter] = useState<string | undefined>(
-    undefined
-  )
+  const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null)
@@ -51,23 +46,26 @@ const Appointments: React.FC = () => {
     useState<AppointmentDTO | null>(null)
   const [rejectReason, setRejectReason] = useState('')
 
-  /**
-   * 加载预约列表
-   */
   const loadAppointments = async () => {
     setLoading(true)
     try {
       const startDate = dateRange?.[0]?.format('YYYY-MM-DD')
       const endDate = dateRange?.[1]?.format('YYYY-MM-DD')
-
       const response = await counselorApi.getCounselorAppointments(
         statusFilter,
         startDate,
         endDate
       )
 
-      if (response.code === 200 && response.data) {
-        setAppointments(response.data)
+      if (
+        ((response as any).success || response.code === 200) &&
+        response.data
+      ) {
+        setAppointments(
+          (((response.data as any).appointments || []) as any[]).map(
+            normalizeAppointment
+          )
+        )
       }
     } catch (error) {
       message.error('加载预约列表失败')
@@ -81,13 +79,10 @@ const Appointments: React.FC = () => {
     loadAppointments()
   }, [statusFilter, dateRange])
 
-  /**
-   * 确认预约
-   */
   const handleConfirm = async (appointmentId: number) => {
     try {
       const response = await counselorApi.confirmAppointment(appointmentId)
-      if (response.code === 200) {
+      if ((response as any).success || response.code === 200) {
         message.success('预约确认成功')
         await loadAppointments()
       } else {
@@ -100,18 +95,12 @@ const Appointments: React.FC = () => {
     }
   }
 
-  /**
-   * 打开拒绝预约对话框
-   */
   const handleOpenRejectModal = (appointment: AppointmentDTO) => {
     setSelectedAppointment(appointment)
     setRejectReason('')
     setRejectModalVisible(true)
   }
 
-  /**
-   * 拒绝预约
-   */
   const handleReject = async () => {
     if (!selectedAppointment) return
 
@@ -126,7 +115,7 @@ const Appointments: React.FC = () => {
         rejectReason
       )
 
-      if (response.code === 200) {
+      if ((response as any).success || response.code === 200) {
         message.success('预约已拒绝')
         setRejectModalVisible(false)
         await loadAppointments()
@@ -140,15 +129,13 @@ const Appointments: React.FC = () => {
     }
   }
 
-  /**
-   * 表格列定义
-   */
   const columns: ColumnsType<AppointmentDTO> = [
     {
-      title: '用户姓名',
+      title: '用户',
       dataIndex: 'userName',
       key: 'userName',
       width: 120,
+      render: value => value || '-',
     },
     {
       title: '预约时间',
@@ -156,9 +143,13 @@ const Appointments: React.FC = () => {
       width: 180,
       render: (_, record) => (
         <div>
-          <div>{dayjs(record.date).format('YYYY-MM-DD')}</div>
+          <div>
+            {record.date ? dayjs(record.date).format('YYYY-MM-DD') : '-'}
+          </div>
           <div className="text-gray-500 text-sm">
-            {record.startTime} - {record.endTime}
+            {record.startTime && record.endTime
+              ? `${record.startTime} - ${record.endTime}`
+              : '-'}
           </div>
         </div>
       ),
@@ -167,23 +158,7 @@ const Appointments: React.FC = () => {
       title: '时长',
       key: 'duration',
       width: 80,
-      render: (_, record) => {
-        const start = dayjs(`2000-01-01 ${record.startTime}`)
-        const end = dayjs(`2000-01-01 ${record.endTime}`)
-        const duration = end.diff(start, 'minute')
-        return `${duration}分钟`
-      },
-    },
-    {
-      title: '咨询方式',
-      dataIndex: 'consultationType',
-      key: 'consultationType',
-      width: 100,
-      render: (type: string) => (
-        <Tag color={type === 'ONLINE' ? 'blue' : 'green'}>
-          {type === 'ONLINE' ? '在线' : '线下'}
-        </Tag>
-      ),
+      render: (_, record) => `${record.duration || 0}分钟`,
     },
     {
       title: '状态',
@@ -196,11 +171,14 @@ const Appointments: React.FC = () => {
       },
     },
     {
-      title: '备注',
-      dataIndex: 'notes',
-      key: 'notes',
+      title: '反馈/原因',
+      key: 'response',
       ellipsis: true,
-      render: (notes: string) => notes || '-',
+      render: (_, record) =>
+        record.consultationRecord ||
+        record.prescription ||
+        record.cancelReason ||
+        '-',
     },
     {
       title: '操作',
@@ -239,17 +217,15 @@ const Appointments: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* 页面标题 */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-800">预约管理</h1>
-          <p className="text-gray-500 mt-1">查看和管理用户的预约请求</p>
+          <p className="text-gray-500 mt-1">查看和处理用户的预约请求</p>
         </div>
 
-        {/* 筛选器 */}
         <Card className="mb-6">
           <Space size="middle" wrap>
             <div>
-              <span className="text-gray-700 mr-2">预约状态:</span>
+              <span className="text-gray-700 mr-2">预约状态</span>
               <Select
                 style={{ width: 150 }}
                 placeholder="全部状态"
@@ -266,7 +242,7 @@ const Appointments: React.FC = () => {
             </div>
 
             <div>
-              <span className="text-gray-700 mr-2">日期范围:</span>
+              <span className="text-gray-700 mr-2">日期范围</span>
               <RangePicker
                 value={dateRange}
                 onChange={setDateRange}
@@ -279,7 +255,6 @@ const Appointments: React.FC = () => {
           </Space>
         </Card>
 
-        {/* 预约列表 */}
         <Card>
           <Table
             columns={columns}
@@ -291,11 +266,10 @@ const Appointments: React.FC = () => {
               showSizeChanger: true,
               showTotal: total => `共 ${total} 条记录`,
             }}
-            scroll={{ x: 1000 }}
+            scroll={{ x: 900 }}
           />
         </Card>
 
-        {/* 拒绝预约对话框 */}
         <Modal
           title="拒绝预约"
           open={rejectModalVisible}
@@ -307,10 +281,11 @@ const Appointments: React.FC = () => {
         >
           <div className="py-4">
             <p className="mb-4 text-gray-600">
-              您确定要拒绝{' '}
+              确定要拒绝
               <span className="font-semibold">
-                {selectedAppointment?.userName}
-              </span>{' '}
+                {' '}
+                {selectedAppointment?.userName || '该用户'}{' '}
+              </span>
               的预约吗？
             </p>
             <div>

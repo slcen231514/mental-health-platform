@@ -1,50 +1,54 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Layout, Menu, Avatar, Dropdown, Button, Badge, Drawer } from 'antd'
+import { useEffect, useMemo, useState } from 'react'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Avatar, Badge, Button, Drawer, Dropdown, Layout, Menu } from 'antd'
 import {
-  HomeOutlined,
+  AuditOutlined,
+  BellOutlined,
+  CalendarOutlined,
+  DashboardOutlined,
+  DollarOutlined,
+  FileSearchOutlined,
+  FileTextOutlined,
   FormOutlined,
-  MessageOutlined,
   HeartOutlined,
-  TeamOutlined,
-  UserOutlined,
+  HomeOutlined,
+  IdcardOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  BellOutlined,
+  MessageOutlined,
   SettingOutlined,
-  DashboardOutlined,
-  CalendarOutlined,
-  FileTextOutlined,
-  DollarOutlined,
-  IdcardOutlined,
-  AuditOutlined,
+  TeamOutlined,
+  UserOutlined,
   UsergroupAddOutlined,
-  FileSearchOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../store/authStore'
 import { useNotificationStore } from '../store/notificationStore'
-import RoleSwitcher from '../components/common/RoleSwitcher'
 import NotificationCenter from '../components/common/NotificationCenter'
+import RoleSwitcher from '../components/common/RoleSwitcher'
 
 const { Header, Sider, Content } = Layout
 
-// 用户角色导航菜单
 const userNavigationItems = [
   { key: '/', icon: <HomeOutlined />, label: '首页' },
   { key: '/assessment', icon: <FormOutlined />, label: '心理评估' },
   { key: '/dialogue', icon: <MessageOutlined />, label: 'AI对话' },
   { key: '/intervention', icon: <HeartOutlined />, label: '干预工具' },
   { key: '/counselor', icon: <TeamOutlined />, label: '咨询师' },
+  { key: '/appointments', icon: <CalendarOutlined />, label: '我的预约' },
+  {
+    key: '/counselor/apply',
+    icon: <IdcardOutlined />,
+    label: '申请成为咨询师',
+  },
 ]
 
-// 咨询师角色导航菜单
 const counselorNavigationItems = [
   { key: '/counselor/dashboard', icon: <DashboardOutlined />, label: '工作台' },
   {
     key: '/counselor/appointments',
     icon: <CalendarOutlined />,
-    label: '我的预约',
+    label: '预约管理',
   },
   { key: '/counselor/schedule', icon: <CalendarOutlined />, label: '时间表' },
   { key: '/counselor/records', icon: <FileTextOutlined />, label: '咨询记录' },
@@ -52,11 +56,11 @@ const counselorNavigationItems = [
   { key: '/counselor/profile', icon: <IdcardOutlined />, label: '个人资料' },
 ]
 
-// 管理员角色导航菜单
 const adminNavigationItems = [
-  { key: '/admin/dashboard', icon: <DashboardOutlined />, label: '仪表板' },
+  { key: '/admin/dashboard', icon: <DashboardOutlined />, label: '仪表盘' },
   { key: '/admin/users', icon: <UsergroupAddOutlined />, label: '用户管理' },
   { key: '/admin/applications', icon: <AuditOutlined />, label: '咨询师审核' },
+  { key: '/admin/content', icon: <FileTextOutlined />, label: '内容管理' },
   { key: '/admin/logs', icon: <FileSearchOutlined />, label: '系统日志' },
 ]
 
@@ -70,7 +74,6 @@ export default function MainLayout() {
   const { user, activeRole, logout } = useAuthStore()
   const { unreadCount, fetchUnreadCount } = useNotificationStore()
 
-  // 根据当前活动角色选择导航菜单
   const menuItems = useMemo(() => {
     switch (activeRole) {
       case 'ADMIN':
@@ -83,7 +86,6 @@ export default function MainLayout() {
     }
   }, [activeRole])
 
-  // 检测屏幕尺寸
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
@@ -94,12 +96,11 @@ export default function MainLayout() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // 定期获取未读通知数量
   useEffect(() => {
     fetchUnreadCount()
     const interval = setInterval(() => {
       fetchUnreadCount()
-    }, 30000) // 每30秒刷新一次
+    }, 30000)
     return () => clearInterval(interval)
   }, [fetchUnreadCount])
 
@@ -108,14 +109,11 @@ export default function MainLayout() {
     navigate('/login')
   }
 
-  // 获取完整的头像URL
   const getAvatarUrl = (avatar?: string) => {
     if (!avatar) return undefined
-    // 如果已经是完整URL，直接返回
     if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
       return avatar
     }
-    // 否则拼接API base URL
     return `${import.meta.env.VITE_API_BASE_URL}${avatar}`
   }
 
@@ -136,6 +134,16 @@ export default function MainLayout() {
       label: '设置',
       onClick: () => navigate('/settings'),
     },
+    ...(activeRole === 'USER'
+      ? [
+          {
+            key: 'appointments',
+            icon: <CalendarOutlined />,
+            label: '我的预约',
+            onClick: () => navigate('/appointments'),
+          },
+        ]
+      : []),
     {
       key: 'logout',
       icon: <LogoutOutlined />,
@@ -151,7 +159,6 @@ export default function MainLayout() {
     }
   }
 
-  // 侧边栏内容
   const sidebarContent = (
     <>
       <div className="h-16 flex items-center justify-center border-b">
@@ -173,7 +180,6 @@ export default function MainLayout() {
 
   return (
     <Layout className="min-h-screen">
-      {/* 桌面端侧边栏 */}
       {!isMobile && (
         <Sider
           trigger={null}
@@ -186,7 +192,6 @@ export default function MainLayout() {
         </Sider>
       )}
 
-      {/* 移动端抽屉 */}
       {isMobile && (
         <Drawer
           placement="left"
@@ -213,10 +218,18 @@ export default function MainLayout() {
             }}
           />
           <div className="flex items-center gap-2 md:gap-4">
-            {/* 角色切换组件 */}
             <RoleSwitcher />
 
-            {/* 通知中心按钮 */}
+            {activeRole === 'USER' && (
+              <Button
+                type="text"
+                icon={<CalendarOutlined />}
+                onClick={() => navigate('/appointments')}
+              >
+                我的预约
+              </Button>
+            )}
+
             <Badge count={unreadCount} offset={[-5, 5]}>
               <Button
                 type="text"
@@ -247,7 +260,6 @@ export default function MainLayout() {
         </Content>
       </Layout>
 
-      {/* 通知中心抽屉 */}
       <NotificationCenter
         visible={notificationVisible}
         onClose={() => setNotificationVisible(false)}

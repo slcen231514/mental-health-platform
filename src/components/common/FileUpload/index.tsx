@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { Upload, message, Progress } from 'antd'
-import { InboxOutlined, FileOutlined } from '@ant-design/icons'
+import { Upload, message } from 'antd'
+import { InboxOutlined } from '@ant-design/icons'
 import type { UploadProps, UploadFile } from 'antd'
 
 const { Dragger } = Upload
@@ -40,7 +40,7 @@ export interface FileUploadProps {
   /**
    * 自定义请求头
    */
-  headers?: Record<string, string>
+  headers?: Record<string, string> | (() => Record<string, string>)
   /**
    * 额外的上传参数
    */
@@ -67,6 +67,84 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const [uploading, setUploading] = useState(false)
 
   /**
+   * 自定义上传请求
+   */
+  const customRequest = async (options: any) => {
+    const {
+      file,
+      onProgress,
+      onSuccess: onSuccessCallback,
+      onError: onErrorCallback,
+    } = options
+
+    const formData = new FormData()
+    // 确保使用原始文件对象
+    formData.append('file', file as File)
+
+    // 添加额外的数据
+    if (data) {
+      Object.keys(data).forEach(key => {
+        formData.append(key, String(data[key]))
+      })
+    }
+
+    try {
+      // 获取最新的 headers
+      const requestHeaders =
+        typeof headers === 'function' ? headers() : headers || {}
+
+      const xhr = new XMLHttpRequest()
+
+      // 监听上传进度
+      xhr.upload.addEventListener('progress', e => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100)
+          onProgress({ percent })
+        }
+      })
+
+      // 监听完成
+      xhr.addEventListener('load', () => {
+        if (xhr.status === 200 || xhr.status === 201) {
+          try {
+            const response = JSON.parse(xhr.responseText)
+            onSuccessCallback(response, file)
+          } catch (e) {
+            onSuccessCallback(xhr.responseText, file)
+          }
+        } else {
+          onErrorCallback(new Error(`上传失败: ${xhr.status}`))
+        }
+      })
+
+      // 监听错误
+      xhr.addEventListener('error', () => {
+        onErrorCallback(new Error('上传失败'))
+      })
+
+      // 监听中止
+      xhr.addEventListener('abort', () => {
+        onErrorCallback(new Error('上传已取消'))
+      })
+
+      // 发送请求
+      xhr.open('POST', action)
+
+      // 设置请求头（不要设置 Content-Type，让浏览器自动设置 multipart/form-data 的 boundary）
+      Object.keys(requestHeaders).forEach(key => {
+        // 跳过 content-type，让浏览器自动处理
+        if (key.toLowerCase() !== 'content-type') {
+          xhr.setRequestHeader(key, requestHeaders[key])
+        }
+      })
+
+      xhr.send(formData)
+    } catch (error) {
+      onErrorCallback(error)
+    }
+  }
+
+  /**
    * 上传前的文件验证
    */
   const beforeUpload: UploadProps['beforeUpload'] = file => {
@@ -85,6 +163,10 @@ const FileUpload: React.FC<FileUploadProps> = ({
       message.error(`文件大小不能超过 ${maxSize}MB！`)
       return Upload.LIST_IGNORE
     }
+
+    // 为文件生成新的 uid，避免重复上传同一文件时的冲突
+    // @ts-expect-error antd UploadFile mutates uid on incoming file objects
+    file.uid = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
 
     return true
   }
@@ -121,74 +203,56 @@ const FileUpload: React.FC<FileUploadProps> = ({
   }
 
   /**
-   * 自定义文件预览
+   * 删除文件
    */
-  const handlePreview = async (file: UploadFile) => {
-    // 如果是图片，显示预览
-    if (file.type?.startsWith('image/')) {
-      const url = file.url || file.thumbUrl
-      if (url) {
-        window.open(url, '_blank')
-      }
-    } else {
-      // 其他文件类型，下载
-      if (file.url) {
-        window.open(file.url, '_blank')
-      }
-    }
+  const handleRemove = (file: UploadFile) => {
+    const newFileList = fileList.filter(item => item.uid !== file.uid)
+    setFileList(newFileList)
+    onChange?.(newFileList)
+    message.info(`已移除 ${file.name}`)
+    return true // 返回 true 表示允许删除
   }
 
   /**
-   * 自定义文件图标
+   * 自定义文件预览
    */
-  const itemRender: UploadProps['itemRender'] = (_originNode, file) => {
-    const isImage = file.type?.startsWith('image/')
+  const handlePreview = async (file: UploadFile) => {
+    // 如果有 URL，直接打开
+    if (file.url) {
+      window.open(file.url, '_blank')
+      return
+    }
 
-    return (
-      <div className="ant-upload-list-item">
-        <div className="ant-upload-list-item-info">
-          <span className="ant-upload-list-item-thumbnail">
-            {isImage && file.thumbUrl ? (
-              <img src={file.thumbUrl} alt={file.name} />
-            ) : (
-              <FileOutlined />
-            )}
-          </span>
-          <span className="ant-upload-list-item-name">{file.name}</span>
-        </div>
-        {file.status === 'uploading' && (
-          <Progress
-            percent={file.percent}
-            size="small"
-            status="active"
-            showInfo={false}
-          />
-        )}
-        <span className="ant-upload-list-item-actions">
-          <button
-            type="button"
-            onClick={() => handlePreview(file)}
-            className="ant-upload-list-item-action"
-          >
-            预览
-          </button>
-        </span>
-      </div>
-    )
+    // 如果是图片且有 thumbUrl，显示预览
+    if (file.type?.startsWith('image/') && file.thumbUrl) {
+      window.open(file.thumbUrl, '_blank')
+      return
+    }
+
+    // PDF 文件，尝试从 response 中获取 URL
+    if (file.response?.data?.fileUrl) {
+      window.open(file.response.data.fileUrl, '_blank')
+      return
+    }
+
+    message.info('文件预览功能开发中')
   }
 
   const uploadProps: UploadProps = {
     name: 'file',
     multiple,
-    action,
-    headers,
-    data,
+    customRequest,
     fileList,
     beforeUpload,
     onChange: handleChange,
+    onRemove: handleRemove,
     onPreview: handlePreview,
-    itemRender,
     accept,
+    showUploadList: {
+      showPreviewIcon: true,
+      showRemoveIcon: true,
+      showDownloadIcon: false,
+    },
   }
 
   return (

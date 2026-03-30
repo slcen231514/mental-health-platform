@@ -45,14 +45,14 @@ const CounselorProfile: React.FC = () => {
         const profileData = response.data
 
         setProfile(profileData)
-        setAvatarUrl(profileData.avatar || '')
+        setAvatarUrl(profileData.avatarUrl || '')
 
         // 设置表单初始值
         form.setFieldsValue({
           name: profileData.name,
           qualification: profileData.qualification,
           specialties: profileData.specialties?.join('、') || '',
-          introduction: profileData.introduction,
+          introduction: profileData.bio,
           price: profileData.price,
           education: profileData.education,
           experience: profileData.experience,
@@ -161,7 +161,7 @@ const CounselorProfile: React.FC = () => {
     if (profile) {
       form.setFieldsValue({
         specialties: profile.specialties?.join('、') || '',
-        introduction: profile.introduction,
+        introduction: profile.bio,
         consultationMethods: '线上、线下', // TODO: Get from backend when available
         price: profile.price,
       })

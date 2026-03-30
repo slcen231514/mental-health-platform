@@ -5,6 +5,7 @@ import {
   CalendarOutlined,
   CheckOutlined,
 } from '@ant-design/icons'
+import type { ReactNode } from 'react'
 import { InterventionPlan } from '@/api/intervention'
 import dayjs from 'dayjs'
 
@@ -15,7 +16,6 @@ interface PlanCardProps {
   onTaskComplete: (planId: number, taskId: number) => void
 }
 
-// 任务类型映射
 const taskTypeMap: Record<string, { label: string; color: string }> = {
   CBT: { label: 'CBT练习', color: 'blue' },
   MEDITATION: { label: '冥想', color: 'purple' },
@@ -24,8 +24,27 @@ const taskTypeMap: Record<string, { label: string; color: string }> = {
   EXERCISE: { label: '运动', color: 'green' },
 }
 
-// 状态映射
-const statusMap: Record<string, { label: string; color: string; icon: any }> = {
+const planStatusMap: Record<
+  string,
+  { label: string; color: string; icon: ReactNode }
+> = {
+  ACTIVE: {
+    label: '进行中',
+    color: 'processing',
+    icon: <ClockCircleOutlined />,
+  },
+  PAUSED: { label: '已暂停', color: 'warning', icon: <ClockCircleOutlined /> },
+  COMPLETED: {
+    label: '已完成',
+    color: 'success',
+    icon: <CheckCircleOutlined />,
+  },
+}
+
+const taskStatusMap: Record<
+  string,
+  { label: string; color: string; icon: ReactNode }
+> = {
   PENDING: { label: '待开始', color: 'default', icon: <ClockCircleOutlined /> },
   IN_PROGRESS: {
     label: '进行中',
@@ -39,8 +58,13 @@ const statusMap: Record<string, { label: string; color: string; icon: any }> = {
   },
 }
 
+const fallbackStatus = (status?: string) => ({
+  label: status || '未知状态',
+  color: 'default',
+  icon: <ClockCircleOutlined />,
+})
+
 export default function PlanCard({ plan, onTaskComplete }: PlanCardProps) {
-  // 计算计划进度
   const completedTasks = plan.tasks.filter(
     task => task.status === 'COMPLETED'
   ).length
@@ -48,8 +72,8 @@ export default function PlanCard({ plan, onTaskComplete }: PlanCardProps) {
   const progress =
     totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
 
-  // 计算剩余天数
   const daysRemaining = dayjs(plan.endDate).diff(dayjs(), 'day')
+  const planStatus = planStatusMap[plan.status] || fallbackStatus(plan.status)
 
   return (
     <Card
@@ -58,9 +82,9 @@ export default function PlanCard({ plan, onTaskComplete }: PlanCardProps) {
           <Space>
             <CalendarOutlined />
             <span>干预计划</span>
-            <Tag color={statusMap[plan.status].color}>
-              {statusMap[plan.status].icon}
-              <span className="ml-1">{statusMap[plan.status].label}</span>
+            <Tag color={planStatus.color}>
+              {planStatus.icon}
+              <span className="ml-1">{planStatus.label}</span>
             </Tag>
           </Space>
           <Text type="secondary" className="text-sm font-normal">
@@ -70,9 +94,8 @@ export default function PlanCard({ plan, onTaskComplete }: PlanCardProps) {
         </div>
       }
     >
-      {/* 进度条 */}
       <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
+        <div className="mb-2 flex items-center justify-between">
           <Text strong>完成进度</Text>
           <Text type="secondary">
             {completedTasks} / {totalTasks} 个任务
@@ -87,13 +110,12 @@ export default function PlanCard({ plan, onTaskComplete }: PlanCardProps) {
           status={progress === 100 ? 'success' : 'active'}
         />
         {daysRemaining > 0 && (
-          <Text type="secondary" className="text-xs mt-1">
+          <Text type="secondary" className="mt-1 text-xs">
             剩余 {daysRemaining} 天
           </Text>
         )}
       </div>
 
-      {/* 任务列表 */}
       <List
         dataSource={plan.tasks}
         renderItem={task => {
@@ -101,14 +123,15 @@ export default function PlanCard({ plan, onTaskComplete }: PlanCardProps) {
             label: task.type,
             color: 'default',
           }
-          const taskStatus = statusMap[task.status]
+          const taskStatus =
+            taskStatusMap[task.status] || fallbackStatus(task.status)
           const isCompleted = task.status === 'COMPLETED'
           const isOverdue =
             !isCompleted && dayjs(task.dueDate).isBefore(dayjs())
 
           return (
             <List.Item
-              className={`${isCompleted ? 'opacity-60' : ''}`}
+              className={isCompleted ? 'opacity-60' : ''}
               actions={[
                 !isCompleted && (
                   <Button
@@ -126,7 +149,7 @@ export default function PlanCard({ plan, onTaskComplete }: PlanCardProps) {
               <List.Item.Meta
                 avatar={
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    className={`flex h-10 w-10 items-center justify-center rounded-full ${
                       isCompleted ? 'bg-green-100' : 'bg-blue-100'
                     }`}
                   >
@@ -139,6 +162,7 @@ export default function PlanCard({ plan, onTaskComplete }: PlanCardProps) {
                       {task.title}
                     </Text>
                     <Tag color={taskType.color}>{taskType.label}</Tag>
+                    <Tag color={taskStatus.color}>{taskStatus.label}</Tag>
                     {isOverdue && <Tag color="red">已逾期</Tag>}
                   </Space>
                 }
@@ -156,7 +180,7 @@ export default function PlanCard({ plan, onTaskComplete }: PlanCardProps) {
                       </Text>
                       {task.completedAt && (
                         <Text type="success">
-                          完成于:{' '}
+                          完成于{' '}
                           {dayjs(task.completedAt).format('YYYY-MM-DD HH:mm')}
                         </Text>
                       )}

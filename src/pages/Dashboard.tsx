@@ -10,6 +10,7 @@ import {
   Avatar,
   Typography,
   Space,
+  message,
 } from 'antd'
 import {
   UserOutlined,
@@ -28,6 +29,7 @@ import {
   type RecentAssessment,
   type RecommendedContent,
 } from '@/api/dashboard'
+import request from '@/api/request'
 import { Loading, Empty } from '@/components'
 import { formatDate, getGreeting } from '@/utils'
 
@@ -54,16 +56,34 @@ export default function Dashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
-      const [statsRes, assessmentsRes, recommendationsRes] = await Promise.all([
-        dashboardApi.getStats(),
-        dashboardApi.getRecentAssessments(5),
-        dashboardApi.getRecommendedContent(6),
-      ])
 
-      setStats(statsRes.data)
-      // 评估历史 API 返回的是分页数据，需要取 records 字段
-      setRecentAssessments(assessmentsRes.data.records || [])
-      setRecommendations(recommendationsRes.data)
+      // 使用 Promise.allSettled 来处理部分API失败的情况
+      const [statsRes, assessmentsRes, recommendationsRes] =
+        await Promise.allSettled([
+          dashboardApi.getStats().catch(() => ({ data: null })),
+          dashboardApi
+            .getRecentAssessments(5)
+            .catch(() => ({ data: { records: [] } })),
+          dashboardApi.getRecommendedContent(6).catch(() => ({ data: [] })),
+        ])
+
+      // 处理统计数据
+      if (statsRes.status === 'fulfilled' && statsRes.value.data) {
+        setStats(statsRes.value.data)
+      }
+
+      // 处理评估历史
+      if (assessmentsRes.status === 'fulfilled' && assessmentsRes.value.data) {
+        setRecentAssessments(assessmentsRes.value.data.records || [])
+      }
+
+      // 处理推荐内容
+      if (
+        recommendationsRes.status === 'fulfilled' &&
+        recommendationsRes.value.data
+      ) {
+        setRecommendations(recommendationsRes.value.data)
+      }
     } catch (error) {
       console.error('获取仪表盘数据失败:', error)
     } finally {
@@ -270,10 +290,21 @@ export default function Dashboard() {
                     )
                   }
                   onClick={() => {
+                    // 增加浏览次数
+                    request
+                      .post(`/dashboard/recommendations/${item.id}/view`)
+                      .catch(err => {
+                        console.error('增加浏览次数失败:', err)
+                      })
+
                     if (item.url) {
                       window.open(item.url, '_blank')
+                    } else {
+                      // 如果没有URL，跳转到文章详情页
+                      navigate(`/content/${item.id}`)
                     }
                   }}
+                  style={{ cursor: 'pointer' }}
                 >
                   <Card.Meta
                     title={

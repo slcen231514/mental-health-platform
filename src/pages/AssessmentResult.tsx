@@ -207,6 +207,12 @@ export default function AssessmentResult() {
           <Button
             type="primary"
             size="large"
+            onClick={() => navigate('/plans')}
+          >
+            查看干预计划
+          </Button>
+          <Button
+            size="large"
             icon={<DownloadOutlined />}
             onClick={handleDownloadReport}
             loading={downloading}

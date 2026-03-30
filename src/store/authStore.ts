@@ -147,6 +147,8 @@ export const useAuthStore = create<AuthState>()(
             activeRole: role,
           })
 
+          // 注意: request拦截器已经返回了response.data，所以这里的response就是后端返回的数据
+          // 后端返回格式: { success: true, message: "...", data: { userId, activeRole, token } }
           const { token: newAccessToken } = response.data
 
           // 更新活动角色和token

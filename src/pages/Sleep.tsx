@@ -3,6 +3,7 @@ import {
   Card,
   Form,
   TimePicker,
+  DatePicker,
   Slider,
   Button,
   Space,
@@ -57,15 +58,18 @@ export default function Sleep() {
         page: 0,
         size: 10,
       })
-      setRecords(response.data.content)
+      // 后端返回的是 PageResult，包含 records 字段
+      setRecords(response.data.records || [])
     } catch (error) {
       console.error('获取睡眠记录失败:', error)
+      setRecords([]) // 确保出错时也设置为空数组
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleSubmit = async (values: {
+    sleepDate: Dayjs
     sleepTime: Dayjs
     wakeTime: Dayjs
     quality: number
@@ -73,9 +77,21 @@ export default function Sleep() {
     try {
       setIsSubmitting(true)
 
+      // 组合日期和时间
+      const sleepDateTime = dayjs(
+        values.sleepDate.format('YYYY-MM-DD') +
+          ' ' +
+          values.sleepTime.format('HH:mm:ss')
+      )
+      const wakeDateTime = dayjs(
+        values.sleepDate.format('YYYY-MM-DD') +
+          ' ' +
+          values.wakeTime.format('HH:mm:ss')
+      )
+
       await interventionApi.saveSleepRecord({
-        sleepTime: values.sleepTime.format('YYYY-MM-DD HH:mm:ss'),
-        wakeTime: values.wakeTime.format('YYYY-MM-DD HH:mm:ss'),
+        sleepTime: sleepDateTime.format('YYYY-MM-DD HH:mm:ss'),
+        wakeTime: wakeDateTime.format('YYYY-MM-DD HH:mm:ss'),
         quality: values.quality,
       })
 
@@ -91,9 +107,21 @@ export default function Sleep() {
   }
 
   // 计算睡眠时长
-  const calculateDuration = (sleepTime: string, wakeTime: string) => {
-    const sleep = dayjs(sleepTime)
-    const wake = dayjs(wakeTime)
+  const calculateDuration = (
+    sleepTime: string,
+    wakeTime: string,
+    sleepDate: string
+  ) => {
+    // sleepTime 和 wakeTime 是 LocalTime 格式 (HH:mm:ss)
+    // 需要结合 sleepDate 构建完整的日期时间
+    const sleep = dayjs(`${sleepDate} ${sleepTime}`)
+    let wake = dayjs(`${sleepDate} ${wakeTime}`)
+
+    // 如果起床时间早于入睡时间，说明跨越了午夜，起床时间应该是第二天
+    if (wake.isBefore(sleep)) {
+      wake = wake.add(1, 'day')
+    }
+
     const diff = wake.diff(sleep, 'minute')
     const hours = Math.floor(diff / 60)
     const minutes = diff % 60
@@ -102,7 +130,7 @@ export default function Sleep() {
 
   // 计算统计数据
   const calculateStats = () => {
-    if (records.length === 0) {
+    if (!records || records.length === 0) {
       return {
         avgDuration: 0,
         avgQuality: 0,
@@ -111,8 +139,15 @@ export default function Sleep() {
     }
 
     const totalMinutes = records.reduce((sum, record) => {
-      const sleep = dayjs(record.sleepTime)
-      const wake = dayjs(record.wakeTime)
+      // sleepTime 和 wakeTime 是 LocalTime 格式，需要结合 sleepDate
+      const sleep = dayjs(`${record.sleepDate} ${record.sleepTime}`)
+      let wake = dayjs(`${record.sleepDate} ${record.wakeTime}`)
+
+      // 如果起床时间早于入睡时间，说明跨越了午夜
+      if (wake.isBefore(sleep)) {
+        wake = wake.add(1, 'day')
+      }
+
       return sum + wake.diff(sleep, 'minute')
     }, 0)
 
@@ -153,9 +188,22 @@ export default function Sleep() {
               layout="vertical"
               onFinish={handleSubmit}
               initialValues={{
+                sleepDate: dayjs(),
                 quality: 3,
               }}
             >
+              <Form.Item
+                name="sleepDate"
+                label="睡眠日期"
+                rules={[{ required: true, message: '请选择睡眠日期' }]}
+              >
+                <DatePicker
+                  className="w-full"
+                  format="YYYY-MM-DD"
+                  placeholder="选择睡眠日期"
+                />
+              </Form.Item>
+
               <Form.Item
                 name="sleepTime"
                 label="入睡时间"
@@ -293,9 +341,7 @@ export default function Sleep() {
                           }
                           title={
                             <Space>
-                              <Text strong>
-                                {dayjs(record.createdAt).format('YYYY-MM-DD')}
-                              </Text>
+                              <Text strong>{record.sleepDate}</Text>
                               <Tag color={qualityInfo.color}>
                                 {qualityInfo.label}
                               </Tag>
@@ -306,12 +352,11 @@ export default function Sleep() {
                               <Space size="large">
                                 <Text type="secondary" className="text-sm">
                                   <MoonOutlined className="mr-1" />
-                                  入睡:{' '}
-                                  {dayjs(record.sleepTime).format('HH:mm')}
+                                  入睡: {record.sleepTime}
                                 </Text>
                                 <Text type="secondary" className="text-sm">
                                   <SunOutlined className="mr-1" />
-                                  起床: {dayjs(record.wakeTime).format('HH:mm')}
+                                  起床: {record.wakeTime}
                                 </Text>
                               </Space>
                               <Text type="secondary" className="text-sm">
@@ -319,7 +364,8 @@ export default function Sleep() {
                                 睡眠时长:{' '}
                                 {calculateDuration(
                                   record.sleepTime,
-                                  record.wakeTime
+                                  record.wakeTime,
+                                  record.sleepDate
                                 )}
                               </Text>
                             </Space>

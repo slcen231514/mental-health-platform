@@ -19,16 +19,19 @@ import {
   ArrowDownOutlined,
   ArrowUpOutlined,
 } from '@ant-design/icons'
-import { interventionApi, CBTSession } from '@/api/intervention'
+import {
+  interventionApi,
+  CBTHistory as CBTHistoryItem,
+} from '@/api/intervention'
 import dayjs from 'dayjs'
 import { useNavigate } from 'react-router-dom'
 
 const { Title, Text, Paragraph } = Typography
 
 export default function CBTHistory() {
-  const [sessions, setSessions] = useState<CBTSession[]>([])
+  const [sessions, setSessions] = useState<CBTHistoryItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [selectedSession, setSelectedSession] = useState<CBTSession | null>(
+  const [selectedSession, setSelectedSession] = useState<CBTHistoryItem | null>(
     null
   )
   const [detailModalVisible, setDetailModalVisible] = useState(false)
@@ -42,7 +45,7 @@ export default function CBTHistory() {
     setIsLoading(true)
     try {
       const response = await interventionApi.getCbtHistory()
-      setSessions(response.data.content)
+      setSessions(response.data.records || [])
     } catch (error) {
       console.error('获取CBT历史失败:', error)
     } finally {
@@ -50,7 +53,7 @@ export default function CBTHistory() {
     }
   }
 
-  const handleViewDetail = (session: CBTSession) => {
+  const handleViewDetail = (session: CBTHistoryItem) => {
     setSelectedSession(session)
     setDetailModalVisible(true)
   }

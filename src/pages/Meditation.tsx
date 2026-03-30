@@ -51,25 +51,25 @@ export default function Meditation() {
       type: 'BREATHING',
       label: '呼吸冥想',
       description: '专注于呼吸，让思绪平静下来',
-      duration: [3, 5, 10, 15],
+      duration: [1, 3, 5, 10, 15],
     },
     {
       type: 'BODY_SCAN',
       label: '身体扫描',
       description: '从头到脚感受身体的每个部位',
-      duration: [5, 10, 15, 20],
+      duration: [3, 5, 10, 15, 20],
     },
     {
       type: 'MINDFULNESS',
       label: '正念冥想',
       description: '觉察当下，不评判地观察思绪',
-      duration: [5, 10, 15, 20],
+      duration: [3, 5, 10, 15, 20],
     },
     {
       type: 'LOVING_KINDNESS',
       label: '慈心冥想',
       description: '培养对自己和他人的慈悲心',
-      duration: [5, 10, 15, 20],
+      duration: [3, 5, 10, 15, 20],
     },
   ]
 
@@ -182,6 +182,12 @@ export default function Meditation() {
       <Paragraph type="secondary" className="mb-6">
         通过冥想练习，培养专注力，减轻压力，提升心理健康
       </Paragraph>
+
+      <div className="mb-4">
+        <Button onClick={() => navigate('/meditation/history')}>
+          查看历史
+        </Button>
+      </div>
 
       <Row gutter={[24, 24]}>
         {/* 左侧：选择区域 */}

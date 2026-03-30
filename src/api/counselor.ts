@@ -1,5 +1,6 @@
 import request from './request'
 import { ApiResponse } from './auth'
+import dayjs from 'dayjs'
 
 // ==================== 请求类型 ====================
 
@@ -12,11 +13,8 @@ export interface MatchCounselorRequest {
 
 export interface CreateAppointmentRequest {
   counselorId: number
-  date: string
-  startTime: string
-  endTime: string
-  consultationType: 'ONLINE' | 'OFFLINE'
-  notes?: string
+  appointmentTime: string
+  duration: number
 }
 
 export interface FeedbackRequest {
@@ -37,12 +35,13 @@ export interface CounselorDTO {
   consultationCount: number
   price: number
   isOnline: boolean
-  avatar?: string
+  avatarUrl?: string
 }
 
 export interface CounselorDetailDTO extends CounselorDTO {
   education?: string
-  experience?: string
+  experience?: number
+  bio?: string
   certifications?: string[]
   workingHours?: string
   languages?: string[]
@@ -67,17 +66,68 @@ export interface TimeSlotDTO {
 
 export interface AppointmentDTO {
   id: number
+  appointmentId?: number
   counselorId: number
   counselorName: string
+  counselorAvatarUrl?: string
   userId: number
   userName: string
+  appointmentTime?: string
+  duration?: number
   date: string
   startTime: string
   endTime: string
   status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED'
   consultationType: 'ONLINE' | 'OFFLINE'
   notes?: string
+  cancelReason?: string
+  consultationRecord?: string
+  prescription?: string
   createdAt: string
+}
+
+export const normalizeAppointment = (
+  appointment: Partial<AppointmentDTO> & Record<string, any>
+): AppointmentDTO => {
+  const appointmentTime = appointment.appointmentTime || ''
+  const duration = appointment.duration ?? 60
+  const appointmentMoment = appointmentTime ? dayjs(appointmentTime) : null
+
+  const date =
+    appointment.date ||
+    (appointmentMoment?.isValid() ? appointmentMoment.format('YYYY-MM-DD') : '')
+  const startTime =
+    appointment.startTime ||
+    (appointmentMoment?.isValid() ? appointmentMoment.format('HH:mm') : '')
+  const endTime =
+    appointment.endTime ||
+    (appointmentMoment?.isValid()
+      ? appointmentMoment.add(duration, 'minute').format('HH:mm')
+      : '')
+
+  return {
+    id: Number(appointment.id ?? appointment.appointmentId ?? 0),
+    appointmentId: Number(appointment.appointmentId ?? appointment.id ?? 0),
+    counselorId: Number(appointment.counselorId ?? 0),
+    counselorName: appointment.counselorName || '',
+    counselorAvatarUrl: appointment.counselorAvatarUrl || appointment.avatarUrl,
+    userId: Number(appointment.userId ?? 0),
+    userName: appointment.userName || '',
+    appointmentTime,
+    duration,
+    date,
+    startTime,
+    endTime,
+    status: (appointment.status as AppointmentDTO['status']) || 'PENDING',
+    consultationType:
+      (appointment.consultationType as AppointmentDTO['consultationType']) ||
+      'ONLINE',
+    notes: appointment.notes,
+    cancelReason: appointment.cancelReason,
+    consultationRecord: appointment.consultationRecord,
+    prescription: appointment.prescription,
+    createdAt: appointment.createdAt || '',
+  }
 }
 
 export interface VideoSessionDTO {
@@ -256,7 +306,7 @@ export const counselorApi = {
   getUserAppointments: (
     status?: string
   ): Promise<ApiResponse<AppointmentDTO[]>> => {
-    return request.get('/counselor/appointments', {
+    return request.get('/counselor/my-appointments', {
       params: { status },
     })
   },

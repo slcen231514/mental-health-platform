@@ -23,7 +23,7 @@ const CounselorCard: React.FC<CounselorCardProps> = ({ counselor }) => {
         <div className="flex justify-center items-center h-48 bg-gradient-to-br from-blue-50 to-indigo-50">
           <Avatar
             size={120}
-            src={counselor.avatar}
+            src={counselor.avatarUrl}
             icon={<UserOutlined />}
             className="border-4 border-white shadow-lg"
           />

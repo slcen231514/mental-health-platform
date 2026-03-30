@@ -125,7 +125,7 @@ export const adminApi = {
   /**
    * 查询待审核申请列表
    * @param status 审核状态
-   * @param page 页码
+   * @param page 页码（前端从1开始，后端从0开始）
    * @param size 每页数量
    * @returns 申请列表
    */
@@ -140,7 +140,7 @@ export const adminApi = {
     }>
   > => {
     return request.get('/admin/counselor-applications', {
-      params: { status, page, size },
+      params: { status, page: page - 1, size },
     })
   },
 

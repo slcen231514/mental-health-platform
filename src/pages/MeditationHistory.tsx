@@ -45,7 +45,7 @@ export default function MeditationHistory() {
     setIsLoading(true)
     try {
       const response = await interventionApi.getMeditationHistory()
-      setRecords(response.data.content)
+      setRecords(response.data.records || [])
     } catch (error) {
       console.error('获取冥想历史失败:', error)
     } finally {
