@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Modal,
   Form,
@@ -14,8 +14,8 @@ import { ClockCircleOutlined, CalendarOutlined } from '@ant-design/icons'
 import dayjs, { Dayjs } from 'dayjs'
 import {
   counselorApi,
-  TimeSlotDTO,
   CreateAppointmentRequest,
+  TimeSlotDTO,
 } from '@/api/counselor'
 
 const { TextArea } = Input
@@ -28,9 +28,16 @@ interface AppointmentModalProps {
   onSuccess: () => void
 }
 
-/**
- * 预约模态框组件
- */
+interface BookableSlotOption {
+  key: string
+  startTime: string
+  endTime: string
+}
+
+const DURATION_OPTIONS = [30, 60, 90, 120]
+const SLOT_STEP_MINUTES = 30
+const API_DATETIME_FORMAT = 'YYYY-MM-DDTHH:mm:ss'
+
 const AppointmentModal: React.FC<AppointmentModalProps> = ({
   visible,
   counselorId,
@@ -43,26 +50,32 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null)
   const [availableSlots, setAvailableSlots] = useState<TimeSlotDTO[]>([])
-  const [selectedSlot, setSelectedSlot] = useState<TimeSlotDTO | null>(null)
+  const [selectedSlot, setSelectedSlot] = useState<BookableSlotOption | null>(
+    null
+  )
+  const selectedDuration = Form.useWatch('duration', form) ?? 60
 
-  // 重置表单
   useEffect(() => {
-    if (visible) {
-      form.resetFields()
-      setSelectedDate(null)
-      setAvailableSlots([])
-      setSelectedSlot(null)
+    if (!visible) {
+      return
     }
+
+    form.resetFields()
+    form.setFieldsValue({
+      consultationType: 'ONLINE',
+      duration: 60,
+    })
+    setSelectedDate(null)
+    setAvailableSlots([])
+    setSelectedSlot(null)
   }, [visible, form])
 
-  // 获取可用时段
   const fetchAvailableSlots = async (date: Dayjs) => {
     setSlotsLoading(true)
     try {
-      const dateStr = date.format('YYYY-MM-DD')
       const response = await counselorApi.getAvailableSlots(
         counselorId,
-        dateStr
+        date.format('YYYY-MM-DD')
       )
 
       if (
@@ -71,19 +84,18 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
       ) {
         setAvailableSlots(response.data)
       } else {
-        message.error(response.message || '获取可用时段失败')
+        message.error(response.message || '获取可预约时段失败')
         setAvailableSlots([])
       }
     } catch (error) {
-      console.error('获取可用时段失败:', error)
-      message.error('获取可用时段失败，请稍后重试')
+      console.error('获取可预约时段失败:', error)
+      message.error('获取可预约时段失败，请稍后重试')
       setAvailableSlots([])
     } finally {
       setSlotsLoading(false)
     }
   }
 
-  // 日期选择处理
   const handleDateChange = (date: Dayjs | null) => {
     setSelectedDate(date)
     setSelectedSlot(null)
@@ -91,13 +103,56 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
 
     if (date) {
       fetchAvailableSlots(date)
-    } else {
-      setAvailableSlots([])
+      return
     }
+
+    setAvailableSlots([])
   }
 
-  // 时段选择处理
-  const handleSlotSelect = (slot: TimeSlotDTO) => {
+  const handleDurationChange = () => {
+    setSelectedSlot(null)
+    form.setFieldValue('timeSlot', undefined)
+  }
+
+  const formatSlotTime = (time: string) => dayjs(time).format('HH:mm')
+
+  const buildBookableOptions = (
+    slots: TimeSlotDTO[],
+    duration: number
+  ): BookableSlotOption[] => {
+    return slots.flatMap(slot => {
+      const options: BookableSlotOption[] = []
+      const slotStart = dayjs(slot.startTime)
+      const slotEnd = dayjs(slot.endTime)
+
+      if (!slot.available || !slotStart.isValid() || !slotEnd.isValid()) {
+        return options
+      }
+
+      let currentStart = slotStart
+      while (
+        currentStart.add(duration, 'minute').isBefore(slotEnd) ||
+        currentStart.add(duration, 'minute').isSame(slotEnd)
+      ) {
+        const currentEnd = currentStart.add(duration, 'minute')
+        options.push({
+          key: `${currentStart.format(API_DATETIME_FORMAT)}-${duration}`,
+          startTime: currentStart.format(API_DATETIME_FORMAT),
+          endTime: currentEnd.format(API_DATETIME_FORMAT),
+        })
+        currentStart = currentStart.add(SLOT_STEP_MINUTES, 'minute')
+      }
+
+      return options
+    })
+  }
+
+  const bookableSlotOptions = buildBookableOptions(
+    availableSlots,
+    Number(selectedDuration)
+  )
+
+  const handleSlotSelect = (slot: BookableSlotOption) => {
     setSelectedSlot(slot)
     form.setFieldValue(
       'timeSlot',
@@ -105,20 +160,15 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
     )
   }
 
-  // 禁用过去的日期
-  const disabledDate = (current: Dayjs) => {
-    return current && current < dayjs().startOf('day')
-  }
+  const disabledDate = (current: Dayjs) =>
+    Boolean(current && current < dayjs().startOf('day'))
 
-  const formatSlotTime = (time: string) => dayjs(time).format('HH:mm')
-
-  // 提交预约
   const handleSubmit = async () => {
     try {
       await form.validateFields()
 
       if (!selectedDate || !selectedSlot) {
-        message.warning('请选择预约日期和时间')
+        message.warning('请选择预约日期、时长和具体时间段')
         return
       }
 
@@ -127,16 +177,13 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
       const appointmentRequest: CreateAppointmentRequest = {
         counselorId,
         appointmentTime: selectedSlot.startTime,
-        duration: dayjs(selectedSlot.endTime).diff(
-          dayjs(selectedSlot.startTime),
-          'minute'
-        ),
+        duration: Number(selectedDuration),
       }
 
       const response = await counselorApi.createAppointment(appointmentRequest)
 
       if ((response as any).success || response.code === 200) {
-        message.success('预约成功！')
+        message.success('预约成功')
         form.resetFields()
         onSuccess()
         onClose()
@@ -167,14 +214,7 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
       okText="确认预约"
       cancelText="取消"
     >
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{
-          consultationType: 'ONLINE',
-        }}
-      >
-        {/* 选择日期 */}
+      <Form form={form} layout="vertical">
         <Form.Item
           label={
             <Space>
@@ -194,13 +234,26 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
           />
         </Form.Item>
 
-        {/* 选择时间段 */}
+        <Form.Item
+          name="duration"
+          label="咨询时长"
+          rules={[{ required: true, message: '请选择咨询时长' }]}
+        >
+          <Radio.Group onChange={handleDurationChange}>
+            {DURATION_OPTIONS.map(duration => (
+              <Radio.Button key={duration} value={duration}>
+                {duration} 分钟
+              </Radio.Button>
+            ))}
+          </Radio.Group>
+        </Form.Item>
+
         <Form.Item
           name="timeSlot"
           label={
             <Space>
               <ClockCircleOutlined />
-              <span>选择时间段</span>
+              <span>选择具体时间段</span>
             </Space>
           }
           rules={[{ required: true, message: '请选择预约时间段' }]}
@@ -208,33 +261,32 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
           <div>
             {slotsLoading ? (
               <div style={{ textAlign: 'center', padding: '20px' }}>
-                <Spin tip="加载可用时段..." />
+                <Spin tip="加载可预约时段..." />
               </div>
-            ) : availableSlots.length > 0 ? (
+            ) : bookableSlotOptions.length > 0 ? (
               <Space wrap size="small">
-                {availableSlots.map((slot, index) => (
+                {bookableSlotOptions.map(slot => (
                   <Tag
-                    key={index}
-                    color={
-                      selectedSlot === slot
-                        ? 'blue'
-                        : slot.available
-                          ? 'default'
-                          : 'red'
-                    }
+                    key={slot.key}
+                    color={selectedSlot?.key === slot.key ? 'blue' : 'default'}
                     style={{
-                      cursor: slot.available ? 'pointer' : 'not-allowed',
+                      cursor: 'pointer',
                       padding: '8px 16px',
                       fontSize: '14px',
                     }}
-                    onClick={() => slot.available && handleSlotSelect(slot)}
+                    onClick={() => handleSlotSelect(slot)}
                   >
                     {formatSlotTime(slot.startTime)} -{' '}
                     {formatSlotTime(slot.endTime)}
-                    {!slot.available && ' (已预约)'}
                   </Tag>
                 ))}
               </Space>
+            ) : selectedDate && availableSlots.length > 0 ? (
+              <div
+                style={{ textAlign: 'center', color: '#999', padding: '20px' }}
+              >
+                当前时长下没有可预约的具体时间段，请尝试缩短时长
+              </div>
             ) : selectedDate ? (
               <div
                 style={{ textAlign: 'center', color: '#999', padding: '20px' }}
@@ -251,7 +303,6 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
           </div>
         </Form.Item>
 
-        {/* 咨询方式 */}
         <Form.Item
           name="consultationType"
           label="咨询方式"
@@ -263,7 +314,6 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
           </Radio.Group>
         </Form.Item>
 
-        {/* 备注信息 */}
         <Form.Item name="notes" label="备注信息">
           <TextArea
             rows={4}

@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from 'react'
-import { Card, Row, Col, Statistic, List, Button, Tag, Empty, Spin } from 'antd'
+import {
+  Card,
+  Row,
+  Col,
+  Statistic,
+  List,
+  Button,
+  Tag,
+  Empty,
+  Spin,
+  message,
+} from 'antd'
 import {
   CalendarOutlined,
   ClockCircleOutlined,
@@ -7,39 +18,25 @@ import {
   FileTextOutlined,
   UserOutlined,
   CheckCircleOutlined,
+  VideoCameraOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
+import {
+  AppointmentDTO,
+  counselorApi,
+  normalizeAppointment,
+} from '@/api/counselor'
 
-/**
- * 今日预约信息
- */
-interface TodayAppointment {
-  id: number
-  userId: number
-  userName: string
-  startTime: string
-  endTime: string
-  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED'
-  consultationType: 'ONLINE' | 'OFFLINE'
-  notes?: string
-}
-
-/**
- * 工作台统计数据
- */
 interface DashboardStats {
   pendingCount: number
   monthlyIncome: number
   monthlyConsultations: number
-  todayAppointments: TodayAppointment[]
+  todayAppointments: AppointmentDTO[]
 }
 
-/**
- * 预约状态配置
- */
 const STATUS_CONFIG: Record<
-  TodayAppointment['status'],
+  AppointmentDTO['status'],
   { text: string; color: string }
 > = {
   PENDING: { text: '待确认', color: 'orange' },
@@ -48,10 +45,6 @@ const STATUS_CONFIG: Record<
   COMPLETED: { text: '已完成', color: 'green' },
 }
 
-/**
- * 咨询师工作台页面
- * 需求: 12.3, 12.7
- */
 const CounselorDashboard: React.FC = () => {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
@@ -62,58 +55,59 @@ const CounselorDashboard: React.FC = () => {
     todayAppointments: [],
   })
 
-  /**
-   * 加载工作台数据
-   */
   useEffect(() => {
     const fetchDashboardData = async () => {
+      setLoading(true)
       try {
-        // TODO: 替换为实际的 API 调用
-        // const response = await counselorApi.getDashboardStats()
-        // setStats(response.data)
+        const now = dayjs()
+        const [appointmentsResponse, incomeResponse] = await Promise.all([
+          counselorApi.getCounselorAppointments(),
+          counselorApi.getIncomeStatistics(now.year(), now.month() + 1),
+        ])
 
-        // 模拟数据
-        setTimeout(() => {
-          setStats({
-            pendingCount: 3,
-            monthlyIncome: 12500,
-            monthlyConsultations: 28,
-            todayAppointments: [
-              {
-                id: 1,
-                userId: 101,
-                userName: '张三',
-                startTime: '09:00',
-                endTime: '10:00',
-                status: 'CONFIRMED',
-                consultationType: 'ONLINE',
-                notes: '焦虑情绪咨询',
-              },
-              {
-                id: 2,
-                userId: 102,
-                userName: '李四',
-                startTime: '14:00',
-                endTime: '15:00',
-                status: 'PENDING',
-                consultationType: 'OFFLINE',
-              },
-              {
-                id: 3,
-                userId: 103,
-                userName: '王五',
-                startTime: '16:00',
-                endTime: '17:00',
-                status: 'CONFIRMED',
-                consultationType: 'ONLINE',
-                notes: '职业发展咨询',
-              },
-            ],
+        const rawAppointments = Array.isArray(appointmentsResponse.data)
+          ? appointmentsResponse.data
+          : ((appointmentsResponse.data as any)?.appointments ?? [])
+        const appointments: AppointmentDTO[] = rawAppointments.map(
+          (appointment: Partial<AppointmentDTO> & Record<string, any>) =>
+            normalizeAppointment(appointment)
+        )
+
+        const todayAppointments = appointments
+          .filter(
+            (appointment: AppointmentDTO) =>
+              appointment.date === now.format('YYYY-MM-DD')
+          )
+          .sort((first, second) => {
+            const firstTime = dayjs(
+              `${first.date} ${first.startTime || '00:00'}`,
+              'YYYY-MM-DD HH:mm'
+            )
+            const secondTime = dayjs(
+              `${second.date} ${second.startTime || '00:00'}`,
+              'YYYY-MM-DD HH:mm'
+            )
+            return firstTime.valueOf() - secondTime.valueOf()
           })
-          setLoading(false)
-        }, 500)
-      } catch (error) {
-        console.error('加载工作台数据失败:', error)
+
+        setStats({
+          pendingCount: appointments.filter(
+            (appointment: AppointmentDTO) => appointment.status === 'PENDING'
+          ).length,
+          monthlyIncome: Number(incomeResponse.data?.totalIncome ?? 0),
+          monthlyConsultations: Number(
+            incomeResponse.data?.consultationCount ?? 0
+          ),
+          todayAppointments,
+        })
+      } catch (error: any) {
+        console.error('加载咨询师工作台数据失败:', error)
+        message.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            '加载咨询师工作台数据失败'
+        )
+      } finally {
         setLoading(false)
       }
     }
@@ -121,26 +115,50 @@ const CounselorDashboard: React.FC = () => {
     fetchDashboardData()
   }, [])
 
-  /**
-   * 渲染预约列表项
-   */
-  const renderAppointmentItem = (appointment: TodayAppointment) => {
+  const handleJoinConsultation = async (appointmentId: number) => {
+    try {
+      const response = await counselorApi.getVideoSession(appointmentId)
+      const url = response.data?.sessionUrl || response.data?.roomUrl
+
+      if (!url) {
+        message.warning('当前预约暂未生成咨询入口')
+        return
+      }
+
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message || error?.message || '进入咨询失败'
+      )
+    }
+  }
+
+  const renderAppointmentItem = (appointment: AppointmentDTO) => {
     const statusConfig = STATUS_CONFIG[appointment.status]
 
     return (
       <List.Item
         actions={[
+          appointment.status === 'CONFIRMED' ? (
+            <Button
+              key="join"
+              type="link"
+              size="small"
+              icon={<VideoCameraOutlined />}
+              onClick={() => handleJoinConsultation(appointment.id)}
+            >
+              进入咨询
+            </Button>
+          ) : null,
           <Button
-            key="detail"
+            key="manage"
             type="link"
             size="small"
-            onClick={() =>
-              navigate(`/counselor/appointments/${appointment.id}`)
-            }
+            onClick={() => navigate('/counselor/appointments')}
           >
-            查看详情
+            前往管理
           </Button>,
-        ]}
+        ].filter(Boolean)}
       >
         <List.Item.Meta
           avatar={
@@ -150,14 +168,16 @@ const CounselorDashboard: React.FC = () => {
           }
           title={
             <div className="flex items-center gap-2">
-              <span className="font-semibold">{appointment.userName}</span>
+              <span className="font-semibold">
+                {appointment.userName || `用户 #${appointment.userId}`}
+              </span>
               <Tag color={statusConfig.color}>{statusConfig.text}</Tag>
               <Tag
                 color={
                   appointment.consultationType === 'ONLINE' ? 'blue' : 'green'
                 }
               >
-                {appointment.consultationType === 'ONLINE' ? '在线' : '线下'}
+                {appointment.consultationType === 'ONLINE' ? '线上' : '线下'}
               </Tag>
             </div>
           }
@@ -166,7 +186,8 @@ const CounselorDashboard: React.FC = () => {
               <div className="flex items-center gap-2 text-gray-600">
                 <ClockCircleOutlined />
                 <span>
-                  {appointment.startTime} - {appointment.endTime}
+                  {appointment.startTime || '--:--'} -{' '}
+                  {appointment.endTime || '--:--'}
                 </span>
               </div>
               {appointment.notes && (
@@ -192,15 +213,13 @@ const CounselorDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* 页面标题 */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-800">咨询师工作台</h1>
           <p className="text-gray-500 mt-1">
-            {dayjs().format('YYYY年MM月DD日 dddd')}
+            {dayjs().format('YYYY年M月D日 dddd')}
           </p>
         </div>
 
-        {/* 统计卡片 */}
         <Row gutter={[16, 16]} className="mb-6">
           <Col xs={24} sm={12} lg={6}>
             <Card>
@@ -219,7 +238,7 @@ const CounselorDashboard: React.FC = () => {
                   navigate('/counselor/appointments?status=PENDING')
                 }
               >
-                立即处理 →
+                立即处理
               </Button>
             </Card>
           </Col>
@@ -240,7 +259,7 @@ const CounselorDashboard: React.FC = () => {
                 className="mt-2 p-0"
                 onClick={() => navigate('/counselor/income')}
               >
-                查看详情 →
+                查看详情
               </Button>
             </Card>
           </Col>
@@ -248,12 +267,20 @@ const CounselorDashboard: React.FC = () => {
           <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
-                title="本月咨询次数"
+                title="本月完成咨询"
                 value={stats.monthlyConsultations}
                 prefix={<CheckCircleOutlined />}
                 suffix="次"
                 valueStyle={{ color: '#1890ff' }}
               />
+              <Button
+                type="link"
+                size="small"
+                className="mt-2 p-0"
+                onClick={() => navigate('/counselor/records')}
+              >
+                查看记录
+              </Button>
             </Card>
           </Col>
 
@@ -266,11 +293,18 @@ const CounselorDashboard: React.FC = () => {
                 suffix="个"
                 valueStyle={{ color: '#722ed1' }}
               />
+              <Button
+                type="link"
+                size="small"
+                className="mt-2 p-0"
+                onClick={() => navigate('/counselor/appointments')}
+              >
+                查看全部
+              </Button>
             </Card>
           </Col>
         </Row>
 
-        {/* 今日预约列表 */}
         <Card
           title={
             <div className="flex items-center gap-2">
@@ -290,7 +324,6 @@ const CounselorDashboard: React.FC = () => {
           )}
         </Card>
 
-        {/* 快捷操作 */}
         <Card title="快捷操作">
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12} md={8}>

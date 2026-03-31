@@ -3,7 +3,9 @@ import {
   Button,
   Card,
   DatePicker,
+  Form,
   Input,
+  InputNumber,
   message,
   Modal,
   Select,
@@ -11,13 +13,19 @@ import {
   Table,
   Tag,
 } from 'antd'
-import { CheckOutlined, CloseOutlined } from '@ant-design/icons'
+import {
+  CheckOutlined,
+  CloseOutlined,
+  FileTextOutlined,
+  VideoCameraOutlined,
+} from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
 import {
   AppointmentDTO,
   counselorApi,
+  CreateConsultationRecordRequest,
   normalizeAppointment,
 } from '@/api/counselor'
 
@@ -45,31 +53,31 @@ const Appointments: React.FC = () => {
   const [selectedAppointment, setSelectedAppointment] =
     useState<AppointmentDTO | null>(null)
   const [rejectReason, setRejectReason] = useState('')
+  const [recordModalVisible, setRecordModalVisible] = useState(false)
+  const [recordForm] = Form.useForm()
 
   const loadAppointments = async () => {
     setLoading(true)
     try {
-      const startDate = dateRange?.[0]?.format('YYYY-MM-DD')
-      const endDate = dateRange?.[1]?.format('YYYY-MM-DD')
       const response = await counselorApi.getCounselorAppointments(
         statusFilter,
-        startDate,
-        endDate
+        dateRange?.[0]?.format('YYYY-MM-DD'),
+        dateRange?.[1]?.format('YYYY-MM-DD')
       )
 
       if (
         ((response as any).success || response.code === 200) &&
         response.data
       ) {
-        setAppointments(
-          (((response.data as any).appointments || []) as any[]).map(
-            normalizeAppointment
-          )
-        )
+        const rawAppointments = ((response.data as any).appointments ||
+          []) as any[]
+        setAppointments(rawAppointments.map(normalizeAppointment))
+      } else {
+        message.error(response.message || '加载预约列表失败')
       }
     } catch (error) {
-      message.error('加载预约列表失败')
       console.error('加载预约列表失败:', error)
+      message.error('加载预约列表失败')
     } finally {
       setLoading(false)
     }
@@ -88,10 +96,10 @@ const Appointments: React.FC = () => {
       } else {
         message.error(response.message || '确认预约失败')
       }
-    } catch (error: unknown) {
-      const errorMsg = (error as any).response?.data?.message || '确认预约失败'
-      message.error(errorMsg)
-      console.error('确认预约失败:', error)
+    } catch (error: any) {
+      message.error(
+        error?.message || error?.response?.data?.message || '确认预约失败'
+      )
     }
   }
 
@@ -102,10 +110,8 @@ const Appointments: React.FC = () => {
   }
 
   const handleReject = async () => {
-    if (!selectedAppointment) return
-
-    if (!rejectReason.trim()) {
-      message.error('请填写拒绝原因')
+    if (!selectedAppointment || !rejectReason.trim()) {
+      message.warning('请填写拒绝原因')
       return
     }
 
@@ -114,7 +120,6 @@ const Appointments: React.FC = () => {
         selectedAppointment.id,
         rejectReason
       )
-
       if ((response as any).success || response.code === 200) {
         message.success('预约已拒绝')
         setRejectModalVisible(false)
@@ -122,10 +127,73 @@ const Appointments: React.FC = () => {
       } else {
         message.error(response.message || '拒绝预约失败')
       }
-    } catch (error: unknown) {
-      const errorMsg = (error as any).response?.data?.message || '拒绝预约失败'
-      message.error(errorMsg)
-      console.error('拒绝预约失败:', error)
+    } catch (error: any) {
+      message.error(
+        error?.message || error?.response?.data?.message || '拒绝预约失败'
+      )
+    }
+  }
+
+  const handleJoinConsultation = async (appointmentId: number) => {
+    try {
+      const response = await counselorApi.getVideoSession(appointmentId)
+      const session = response.data
+      const url = session?.sessionUrl || session?.roomUrl
+      if (!url) {
+        message.warning('当前预约暂未生成咨询入口')
+        return
+      }
+
+      window.open(url, '_blank', 'noopener,noreferrer')
+      message.success('已打开咨询入口')
+    } catch (error: any) {
+      message.error(
+        error?.message || error?.response?.data?.message || '进入咨询失败'
+      )
+    }
+  }
+
+  const handleOpenCompleteModal = (appointment: AppointmentDTO) => {
+    setSelectedAppointment(appointment)
+    recordForm.setFieldsValue({
+      consultationDate: appointment.date ? dayjs(appointment.date) : dayjs(),
+      duration: appointment.duration || 60,
+      summary: '',
+      followUpAdvice: '',
+    })
+    setRecordModalVisible(true)
+  }
+
+  const handleCompleteConsultation = async () => {
+    if (!selectedAppointment) {
+      return
+    }
+
+    try {
+      const values = await recordForm.validateFields()
+      const payload: CreateConsultationRecordRequest = {
+        appointmentId: selectedAppointment.id,
+        consultationDate: values.consultationDate.format('YYYY-MM-DD'),
+        duration: values.duration,
+        summary: values.summary,
+        followUpAdvice: values.followUpAdvice,
+      }
+
+      const response = await counselorApi.createConsultationRecord(payload)
+      if ((response as any).success || response.code === 200) {
+        message.success('咨询已完成，记录已保存')
+        setRecordModalVisible(false)
+        await loadAppointments()
+      } else {
+        message.error(response.message || '完成咨询失败')
+      }
+    } catch (error: any) {
+      if (error?.errorFields) {
+        return
+      }
+      message.error(
+        error?.message || error?.response?.data?.message || '完成咨询失败'
+      )
     }
   }
 
@@ -157,7 +225,7 @@ const Appointments: React.FC = () => {
     {
       title: '时长',
       key: 'duration',
-      width: 80,
+      width: 90,
       render: (_, record) => `${record.duration || 0}分钟`,
     },
     {
@@ -171,7 +239,7 @@ const Appointments: React.FC = () => {
       },
     },
     {
-      title: '反馈/原因',
+      title: '备注',
       key: 'response',
       ellipsis: true,
       render: (_, record) =>
@@ -183,33 +251,55 @@ const Appointments: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 180,
+      width: 320,
       fixed: 'right',
       render: (_, record) => {
-        if (record.status !== 'PENDING') {
-          return <span className="text-gray-400">-</span>
+        if (record.status === 'PENDING') {
+          return (
+            <Space>
+              <Button
+                type="primary"
+                size="small"
+                icon={<CheckOutlined />}
+                onClick={() => handleConfirm(record.id)}
+              >
+                确认
+              </Button>
+              <Button
+                danger
+                size="small"
+                icon={<CloseOutlined />}
+                onClick={() => handleOpenRejectModal(record)}
+              >
+                拒绝
+              </Button>
+            </Space>
+          )
         }
 
-        return (
-          <Space>
-            <Button
-              type="primary"
-              size="small"
-              icon={<CheckOutlined />}
-              onClick={() => handleConfirm(record.id)}
-            >
-              确认
-            </Button>
-            <Button
-              danger
-              size="small"
-              icon={<CloseOutlined />}
-              onClick={() => handleOpenRejectModal(record)}
-            >
-              拒绝
-            </Button>
-          </Space>
-        )
+        if (record.status === 'CONFIRMED') {
+          return (
+            <Space>
+              <Button
+                size="small"
+                icon={<VideoCameraOutlined />}
+                onClick={() => handleJoinConsultation(record.id)}
+              >
+                进入咨询
+              </Button>
+              <Button
+                type="primary"
+                size="small"
+                icon={<FileTextOutlined />}
+                onClick={() => handleOpenCompleteModal(record)}
+              >
+                完成咨询
+              </Button>
+            </Space>
+          )
+        }
+
+        return <span className="text-gray-400">-</span>
       },
     },
   ]
@@ -219,7 +309,7 @@ const Appointments: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-800">预约管理</h1>
-          <p className="text-gray-500 mt-1">查看和处理用户的预约请求</p>
+          <p className="text-gray-500 mt-1">确认预约、进入咨询并完成咨询记录</p>
         </div>
 
         <Card className="mb-6">
@@ -247,7 +337,6 @@ const Appointments: React.FC = () => {
                 value={dateRange}
                 onChange={setDateRange}
                 format="YYYY-MM-DD"
-                placeholder={['开始日期', '结束日期']}
               />
             </div>
 
@@ -266,7 +355,7 @@ const Appointments: React.FC = () => {
               showSizeChanger: true,
               showTotal: total => `共 ${total} 条记录`,
             }}
-            scroll={{ x: 900 }}
+            scroll={{ x: 1100 }}
           />
         </Card>
 
@@ -279,29 +368,63 @@ const Appointments: React.FC = () => {
           cancelText="取消"
           okButtonProps={{ danger: true }}
         >
-          <div className="py-4">
-            <p className="mb-4 text-gray-600">
-              确定要拒绝
-              <span className="font-semibold">
-                {' '}
-                {selectedAppointment?.userName || '该用户'}{' '}
-              </span>
-              的预约吗？
-            </p>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                拒绝原因 <span className="text-red-500">*</span>
-              </label>
-              <TextArea
-                value={rejectReason}
-                onChange={e => setRejectReason(e.target.value)}
-                placeholder="请填写拒绝原因，将发送给用户"
-                rows={4}
-                maxLength={200}
-                showCount
-              />
-            </div>
-          </div>
+          <TextArea
+            value={rejectReason}
+            onChange={e => setRejectReason(e.target.value)}
+            rows={4}
+            maxLength={200}
+            showCount
+            placeholder="请填写拒绝原因"
+          />
+        </Modal>
+
+        <Modal
+          title="完成咨询"
+          open={recordModalVisible}
+          onOk={handleCompleteConsultation}
+          onCancel={() => setRecordModalVisible(false)}
+          okText="保存并完成"
+          cancelText="取消"
+          width={700}
+          destroyOnClose
+        >
+          <Form
+            form={recordForm}
+            layout="vertical"
+            preserve={false}
+            className="py-4"
+          >
+            <Form.Item
+              label="咨询日期"
+              name="consultationDate"
+              rules={[{ required: true, message: '请选择咨询日期' }]}
+            >
+              <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+            </Form.Item>
+
+            <Form.Item
+              label="咨询时长（分钟）"
+              name="duration"
+              rules={[
+                { required: true, message: '请输入咨询时长' },
+                { type: 'number', min: 1, message: '时长必须大于0' },
+              ]}
+            >
+              <InputNumber style={{ width: '100%' }} min={1} />
+            </Form.Item>
+
+            <Form.Item
+              label="咨询摘要"
+              name="summary"
+              rules={[{ required: true, message: '请输入咨询摘要' }]}
+            >
+              <TextArea rows={6} maxLength={2000} showCount />
+            </Form.Item>
+
+            <Form.Item label="后续建议" name="followUpAdvice">
+              <TextArea rows={4} maxLength={1000} showCount />
+            </Form.Item>
+          </Form>
         </Modal>
       </div>
     </div>

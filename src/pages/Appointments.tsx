@@ -9,6 +9,7 @@ import {
   List,
   message,
   Modal,
+  Rate,
   Space,
   Spin,
   Tabs,
@@ -21,6 +22,7 @@ import {
   CloseCircleOutlined,
   ExclamationCircleOutlined,
   UserOutlined,
+  VideoCameraOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
@@ -42,6 +44,10 @@ const Appointments: React.FC = () => {
   const [selectedAppointment, setSelectedAppointment] =
     useState<AppointmentDTO | null>(null)
   const [cancelLoading, setCancelLoading] = useState(false)
+  const [feedbackModalVisible, setFeedbackModalVisible] = useState(false)
+  const [feedbackLoading, setFeedbackLoading] = useState(false)
+  const [feedbackRating, setFeedbackRating] = useState(5)
+  const [feedbackComment, setFeedbackComment] = useState('')
 
   const loadAppointments = async (status?: string) => {
     try {
@@ -113,6 +119,74 @@ const Appointments: React.FC = () => {
 
   const handleViewCounselor = (counselorId: number) => {
     navigate(`/counselor/${counselorId}`)
+  }
+
+  const handleJoinConsultation = async (appointmentId: number) => {
+    try {
+      const response = await counselorApi.getVideoSession(appointmentId)
+      const session = response.data
+      const url = session?.sessionUrl || session?.roomUrl
+
+      if (!url) {
+        message.warning('当前预约暂未生成咨询入口')
+        return
+      }
+
+      window.open(url, '_blank', 'noopener,noreferrer')
+      message.success('已打开咨询入口')
+    } catch (error: any) {
+      console.error('进入咨询失败:', error)
+      message.error(
+        error?.message || error?.response?.data?.message || '进入咨询失败'
+      )
+    }
+  }
+
+  const handleOpenFeedbackModal = (appointment: AppointmentDTO) => {
+    setSelectedAppointment(appointment)
+    setFeedbackRating(
+      typeof appointment.userFeedbackRating === 'number'
+        ? appointment.userFeedbackRating
+        : 5
+    )
+    setFeedbackComment(appointment.userFeedbackComment || '')
+    setFeedbackModalVisible(true)
+  }
+
+  const handleSubmitFeedback = async () => {
+    if (!selectedAppointment) return
+
+    if (feedbackRating < 0 || feedbackRating > 5) {
+      message.warning('评分需在 0 到 5 分之间')
+      return
+    }
+
+    try {
+      setFeedbackLoading(true)
+      const response = await counselorApi.submitFeedback(
+        selectedAppointment.id,
+        {
+          type: 'USER_TO_COUNSELOR',
+          rating: feedbackRating,
+          comment: feedbackComment.trim(),
+        }
+      )
+
+      if ((response as any).success || response.code === 200) {
+        message.success('服务评价提交成功')
+        setFeedbackModalVisible(false)
+        loadAppointments(activeTab === 'ALL' ? undefined : activeTab)
+      } else {
+        message.error(response.message || '提交服务评价失败')
+      }
+    } catch (error: any) {
+      console.error('提交服务评价失败:', error)
+      message.error(
+        error?.message || error?.response?.data?.message || '提交服务评价失败'
+      )
+    } finally {
+      setFeedbackLoading(false)
+    }
   }
 
   const getStatusTag = (status: AppointmentDTO['status']) => {
@@ -203,6 +277,26 @@ const Appointments: React.FC = () => {
                         取消预约
                       </Button>
                     ) : null,
+                    appointment.status === 'CONFIRMED' ? (
+                      <Button
+                        key="join"
+                        type="link"
+                        icon={<VideoCameraOutlined />}
+                        onClick={() => handleJoinConsultation(appointment.id)}
+                      >
+                        进入咨询
+                      </Button>
+                    ) : null,
+                    appointment.status === 'COMPLETED' &&
+                    !appointment.userFeedbackSubmitted ? (
+                      <Button
+                        key="feedback"
+                        type="link"
+                        onClick={() => handleOpenFeedbackModal(appointment)}
+                      >
+                        评价本次服务
+                      </Button>
+                    ) : null,
                   ].filter(Boolean)}
                 >
                   <List.Item.Meta
@@ -233,7 +327,7 @@ const Appointments: React.FC = () => {
                             }
                           >
                             {appointment.date
-                              ? dayjs(appointment.date).format('YYYY年MM月DD日')
+                              ? dayjs(appointment.date).format('YYYY年M月D日')
                               : '-'}
                           </Descriptions.Item>
                           <Descriptions.Item
@@ -254,13 +348,29 @@ const Appointments: React.FC = () => {
                             </Descriptions.Item>
                           )}
                           {appointment.consultationRecord && (
-                            <Descriptions.Item label="咨询反馈">
+                            <Descriptions.Item label="咨询摘要">
                               {appointment.consultationRecord}
                             </Descriptions.Item>
                           )}
                           {appointment.prescription && (
                             <Descriptions.Item label="后续建议">
                               {appointment.prescription}
+                            </Descriptions.Item>
+                          )}
+                          {appointment.userFeedbackSubmitted && (
+                            <Descriptions.Item label="服务评价">
+                              <Space direction="vertical" size={4}>
+                                <Rate
+                                  disabled
+                                  value={appointment.userFeedbackRating || 0}
+                                />
+                                <span>
+                                  {appointment.userFeedbackRating ?? 0} 分
+                                </span>
+                                {appointment.userFeedbackComment && (
+                                  <span>{appointment.userFeedbackComment}</span>
+                                )}
+                              </Space>
                             </Descriptions.Item>
                           )}
                           {appointment.cancelReason && (
@@ -294,6 +404,38 @@ const Appointments: React.FC = () => {
           )}
         </Spin>
       </Card>
+
+      <Modal
+        title="评价本次服务"
+        open={feedbackModalVisible}
+        onCancel={() => setFeedbackModalVisible(false)}
+        onOk={handleSubmitFeedback}
+        confirmLoading={feedbackLoading}
+        okText="提交评价"
+        cancelText="取消"
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="text-gray-600 mb-2">
+              请为{' '}
+              <strong>{selectedAppointment?.counselorName || '咨询师'}</strong>{' '}
+              本次服务评分
+            </p>
+            <Rate value={feedbackRating} onChange={setFeedbackRating} />
+            <div className="text-sm text-gray-500 mt-2">
+              当前评分：{feedbackRating} 分，可选择 0 到 5 分
+            </div>
+          </div>
+          <TextArea
+            rows={4}
+            placeholder="可以补充本次咨询的感受和建议"
+            value={feedbackComment}
+            onChange={e => setFeedbackComment(e.target.value)}
+            maxLength={300}
+            showCount
+          />
+        </div>
+      </Modal>
 
       <Modal
         title="取消预约"

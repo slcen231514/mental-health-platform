@@ -18,6 +18,7 @@ export interface CreateAppointmentRequest {
 }
 
 export interface FeedbackRequest {
+  type?: 'USER_TO_COUNSELOR' | 'COUNSELOR_TO_USER'
   rating: number
   comment: string
   tags?: string[]
@@ -83,6 +84,9 @@ export interface AppointmentDTO {
   cancelReason?: string
   consultationRecord?: string
   prescription?: string
+  userFeedbackSubmitted?: boolean
+  userFeedbackRating?: number
+  userFeedbackComment?: string
   createdAt: string
 }
 
@@ -126,15 +130,22 @@ export const normalizeAppointment = (
     cancelReason: appointment.cancelReason,
     consultationRecord: appointment.consultationRecord,
     prescription: appointment.prescription,
+    userFeedbackSubmitted: Boolean(appointment.userFeedbackSubmitted),
+    userFeedbackRating:
+      appointment.userFeedbackRating != null
+        ? Number(appointment.userFeedbackRating)
+        : undefined,
+    userFeedbackComment: appointment.userFeedbackComment,
     createdAt: appointment.createdAt || '',
   }
 }
 
 export interface VideoSessionDTO {
   sessionId: string
-  roomUrl: string
+  sessionUrl: string
+  roomUrl?: string
   token: string
-  expiresAt: string
+  expiresAt?: string
 }
 
 // ==================== 咨询师时间表管理类型 ====================
@@ -156,6 +167,7 @@ export interface AddAvailabilityRequest {
 // ==================== 咨询记录管理类型 ====================
 
 export interface ConsultationRecordDTO {
+  id?: number
   recordId: number
   appointmentId: number
   userId: number
@@ -164,6 +176,9 @@ export interface ConsultationRecordDTO {
   duration: number
   summary: string
   followUpAdvice?: string
+  userFeedbackRating?: number
+  userFeedbackComment?: string
+  userFeedbackCreatedAt?: string
   createdAt: string
   updatedAt: string
 }
@@ -177,32 +192,56 @@ export interface CreateConsultationRecordRequest {
 }
 
 export interface UpdateConsultationRecordRequest {
+  consultationDate?: string
+  duration?: number
   summary: string
   followUpAdvice?: string
 }
 
+export const normalizeConsultationRecord = (
+  record: Partial<ConsultationRecordDTO> & Record<string, any>
+): ConsultationRecordDTO => ({
+  id: Number(record.id ?? record.recordId ?? 0),
+  recordId: Number(record.recordId ?? record.id ?? 0),
+  appointmentId: Number(record.appointmentId ?? 0),
+  userId: Number(record.userId ?? 0),
+  userName: record.userName || String(record.userId ?? ''),
+  consultationDate: record.consultationDate || '',
+  duration: Number(record.duration ?? 0),
+  summary: record.summary || '',
+  followUpAdvice: record.followUpAdvice,
+  userFeedbackRating:
+    record.userFeedbackRating != null
+      ? Number(record.userFeedbackRating)
+      : undefined,
+  userFeedbackComment: record.userFeedbackComment,
+  userFeedbackCreatedAt: record.userFeedbackCreatedAt || '',
+  createdAt: record.createdAt || '',
+  updatedAt: record.updatedAt || '',
+})
+
 // ==================== 收入统计类型 ====================
 
 export interface IncomeStatisticsDTO {
-  currentMonth: {
-    totalIncome: number
-    consultationCount: number
-    averageIncome: number
-  }
-  monthlyTrend: Array<{
-    month: string
-    income: number
-    count: number
-  }>
+  totalIncome: number
+  consultationCount: number
+  averageIncome: number
 }
 
 export interface IncomeDetailDTO {
-  appointmentId: number
+  recordId: number
   userId: number
   userName: string
   consultationDate: string
   duration: number
-  amount: number
+  income: number
+}
+
+export interface IncomeTrendDTO {
+  year: number
+  month: number
+  income: number
+  consultationCount: number
 }
 
 // ==================== Counselor API ====================
@@ -467,6 +506,10 @@ export const counselorApi = {
     return request.get('/counselor/income/details', {
       params: { startDate, endDate },
     })
+  },
+
+  getIncomeTrend: (): Promise<ApiResponse<IncomeTrendDTO[]>> => {
+    return request.get('/counselor/income/trend')
   },
 
   // ==================== 咨询师资料管理 API ====================
