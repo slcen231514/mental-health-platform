@@ -30,7 +30,7 @@ import {
 } from 'recharts'
 import { adminApi, DashboardStatisticsDTO } from '@/api/admin'
 
-const { Title } = Typography
+const { Title, Text } = Typography
 
 const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(false)
@@ -46,8 +46,29 @@ const AdminDashboard: React.FC = () => {
     setLoading(true)
     try {
       const response = await adminApi.getDashboardStatistics()
-      if (response.data) {
-        setStatistics(response.data)
+      const payload = (response as any)?.data ?? null
+
+      if (payload) {
+        setStatistics({
+          totalUsers: Number(payload.totalUsers ?? 0),
+          totalCounselors: Number(payload.totalCounselors ?? 0),
+          activeCounselors: Number(payload.activeCounselors ?? 0),
+          pendingApplications: Number(payload.pendingApplications ?? 0),
+          monthlyAppointments: {
+            total: Number(payload.monthlyAppointments?.total ?? 0),
+            completed: Number(payload.monthlyAppointments?.completed ?? 0),
+            cancelled: Number(payload.monthlyAppointments?.cancelled ?? 0),
+          },
+          dailyUserTrend: Array.isArray(payload.dailyUserTrend)
+            ? payload.dailyUserTrend
+            : [],
+          dailyAppointmentTrend: Array.isArray(payload.dailyAppointmentTrend)
+            ? payload.dailyAppointmentTrend
+            : [],
+          counselorRankings: Array.isArray(payload.counselorRankings)
+            ? payload.counselorRankings
+            : [],
+        })
       } else {
         message.error('获取统计数据失败')
       }
@@ -64,7 +85,7 @@ const AdminDashboard: React.FC = () => {
       title: '排名',
       key: 'rank',
       width: 80,
-      render: (_: any, __: any, index: number) => index + 1,
+      render: (_: unknown, __: unknown, index: number) => index + 1,
     },
     {
       title: '咨询师姓名',
@@ -76,6 +97,13 @@ const AdminDashboard: React.FC = () => {
       dataIndex: 'appointmentCount',
       key: 'appointmentCount',
       sorter: (a: any, b: any) => a.appointmentCount - b.appointmentCount,
+    },
+    {
+      title: '评分',
+      dataIndex: 'rating',
+      key: 'rating',
+      render: (value: number | undefined) =>
+        typeof value === 'number' ? value.toFixed(1) : '-',
     },
   ]
 
@@ -104,7 +132,7 @@ const AdminDashboard: React.FC = () => {
           minHeight: '400px',
         }}
       >
-        <Typography.Text type="secondary">暂无数据</Typography.Text>
+        <Text type="secondary">暂无数据</Text>
       </div>
     )
   }
@@ -115,7 +143,6 @@ const AdminDashboard: React.FC = () => {
         管理员仪表板
       </Title>
 
-      {/* 统计卡片 */}
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
         <Col xs={24} sm={12} lg={6}>
           <Card>
@@ -168,12 +195,11 @@ const AdminDashboard: React.FC = () => {
         </Col>
       </Row>
 
-      {/* 当月预约统计 */}
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
         <Col xs={24} sm={8}>
           <Card>
             <Statistic
-              title="当月总预约数"
+              title="本月总预约数"
               value={statistics.monthlyAppointments.total}
               prefix={<CalendarOutlined />}
               valueStyle={{ color: '#1890ff' }}
@@ -202,10 +228,9 @@ const AdminDashboard: React.FC = () => {
         </Col>
       </Row>
 
-      {/* 趋势图表 */}
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
         <Col xs={24} lg={12}>
-          <Card title="每日新增用户趋势（最近30天）">
+          <Card title="每日新增用户趋势（最近 30 天）">
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={statistics.dailyUserTrend}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -233,7 +258,7 @@ const AdminDashboard: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="每日预约数趋势（最近30天）">
+          <Card title="每日预约数趋势（最近 30 天）">
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={statistics.dailyAppointmentTrend}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -262,10 +287,9 @@ const AdminDashboard: React.FC = () => {
         </Col>
       </Row>
 
-      {/* 咨询师排行榜 */}
       <Row gutter={[16, 16]}>
         <Col xs={24}>
-          <Card title="咨询师排行榜（前10名）">
+          <Card title="咨询师排行榜（前 10 名）">
             <Table
               columns={topCounselorsColumns}
               dataSource={statistics.counselorRankings}

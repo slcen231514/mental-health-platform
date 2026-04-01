@@ -89,6 +89,30 @@ export interface SystemLogDTO {
   operationTime: string
 }
 
+const normalizeUser = (raw: any): UserDTO => ({
+  userId: Number(raw?.userId ?? raw?.id ?? 0),
+  username: raw?.username ?? '',
+  email: raw?.email ?? '',
+  roles: Array.isArray(raw?.roles) ? raw.roles : [],
+  status: raw?.status ?? 'ACTIVE',
+  createdAt: raw?.createdAt ?? '',
+})
+
+const normalizeUserDetail = (raw: any): UserDetailDTO => ({
+  ...normalizeUser(raw),
+  phone: raw?.phone,
+  counselorInfo: raw?.counselorInfo
+    ? {
+        counselorId: Number(
+          raw.counselorInfo.counselorId ?? raw.counselorInfo.id ?? 0
+        ),
+        status: raw.counselorInfo.status ?? 'INACTIVE',
+        consultationCount: Number(raw.counselorInfo.consultationCount ?? 0),
+        rating: Number(raw.counselorInfo.rating ?? 0),
+      }
+    : undefined,
+})
+
 // ==================== Admin API ====================
 
 export const adminApi = {
@@ -98,7 +122,10 @@ export const adminApi = {
    * 查询平台统计数据
    * @returns 仪表板统计数据
    */
-  getDashboardStatistics: (): Promise<ApiResponse<DashboardStatisticsDTO>> => {
+  getDashboardStatistics: (): Promise<{
+    success?: boolean
+    data: DashboardStatisticsDTO
+  }> => {
     return request.get('/admin/statistics/dashboard')
   },
 
@@ -186,7 +213,7 @@ export const adminApi = {
    * @param size 每页数量
    * @returns 用户列表
    */
-  getUsers: (
+  getUsers: async (
     role?: string,
     keyword?: string,
     page: number = 1,
@@ -197,9 +224,25 @@ export const adminApi = {
       users: UserDTO[]
     }>
   > => {
-    return request.get('/admin/users', {
-      params: { role, keyword, page, size },
+    const response = await request.get('/admin/users', {
+      params: { role, keyword, page: Math.max(page - 1, 0), size },
     })
+
+    const data = response?.data ?? {}
+    const rawUsers = data.users ?? data.content ?? []
+    const users = Array.isArray(rawUsers) ? rawUsers.map(normalizeUser) : []
+    const total = Number(data.total ?? data.totalElements ?? 0)
+
+    return {
+      ...response,
+      code: 200,
+      message: 'success',
+      data: {
+        ...data,
+        users,
+        total,
+      },
+    }
   },
 
   /**
@@ -207,8 +250,16 @@ export const adminApi = {
    * @param userId 用户ID
    * @returns 用户详细信息
    */
-  getUserDetail: (userId: number): Promise<ApiResponse<UserDetailDTO>> => {
-    return request.get(`/admin/users/${userId}`)
+  getUserDetail: async (
+    userId: number
+  ): Promise<ApiResponse<UserDetailDTO>> => {
+    const response = await request.get(`/admin/users/${userId}`)
+    return {
+      ...response,
+      code: 200,
+      message: 'success',
+      data: normalizeUserDetail(response?.data),
+    }
   },
 
   /**
@@ -260,9 +311,45 @@ export const adminApi = {
       logs: SystemLogDTO[]
     }>
   > => {
-    return request.get('/admin/logs', {
-      params: { operationType, startDate, endDate, operator, page, size },
-    })
+    return request
+      .get('/admin/logs', {
+        params: {
+          operationType,
+          startDate,
+          endDate,
+          operatorName: operator,
+          page: Math.max(page - 1, 0),
+          size,
+        },
+      })
+      .then(response => {
+        const data = response?.data ?? {}
+        const rawLogs = data.logs ?? data.content ?? []
+        const logs: SystemLogDTO[] = Array.isArray(rawLogs)
+          ? rawLogs.map((item: any) => ({
+              logId: Number(item?.logId ?? item?.id ?? 0),
+              operationType: item?.operationType ?? '',
+              operator: item?.operator ?? item?.operatorName ?? '',
+              operatorId: Number(item?.operatorId ?? 0),
+              operationDetails: item?.operationDetails ?? '',
+              ipAddress: item?.ipAddress ?? '',
+              operationTime: item?.operationTime ?? '',
+            }))
+          : []
+
+        const total = Number(data.total ?? data.totalElements ?? 0)
+
+        return {
+          ...response,
+          code: 200,
+          message: 'success',
+          data: {
+            ...data,
+            logs,
+            total,
+          },
+        }
+      })
   },
 }
 

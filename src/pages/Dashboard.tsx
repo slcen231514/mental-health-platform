@@ -10,7 +10,6 @@ import {
   Avatar,
   Typography,
   Space,
-  message,
 } from 'antd'
 import {
   UserOutlined,
@@ -23,17 +22,34 @@ import {
   BookOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '@/store'
+import { assessmentApi, type AssessmentResult } from '@/api/assessment'
 import {
-  dashboardApi,
-  type DashboardStats,
-  type RecentAssessment,
-  type RecommendedContent,
-} from '@/api/dashboard'
+  counselorApi,
+  type AppointmentDTO,
+  normalizeAppointment,
+} from '@/api/counselor'
+import { interventionApi } from '@/api/intervention'
 import request from '@/api/request'
 import { Loading, Empty } from '@/components'
 import { formatDate, getGreeting } from '@/utils'
 
 const { Title, Text, Paragraph } = Typography
+
+interface DashboardStats {
+  assessmentCount: number
+  dialogueCount: number
+  appointmentCount: number
+  interventionTaskCount: number
+}
+
+interface RecommendedContent {
+  id: number
+  type: 'article' | 'video' | 'exercise' | 'counselor'
+  title: string
+  description: string
+  thumbnail?: string
+  url?: string
+}
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -42,13 +58,12 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentAssessments, setRecentAssessments] = useState<
-    RecentAssessment[]
+    AssessmentResult[]
   >([])
   const [recommendations, setRecommendations] = useState<RecommendedContent[]>(
     []
   )
 
-  // 获取仪表盘数据
   useEffect(() => {
     fetchDashboardData()
   }, [])
@@ -57,41 +72,74 @@ export default function Dashboard() {
     try {
       setLoading(true)
 
-      // 使用 Promise.allSettled 来处理部分API失败的情况
-      const [statsRes, assessmentsRes, recommendationsRes] =
-        await Promise.allSettled([
-          dashboardApi.getStats().catch(() => ({ data: null })),
-          dashboardApi
-            .getRecentAssessments(5)
-            .catch(() => ({ data: { records: [] } })),
-          dashboardApi.getRecommendedContent(6).catch(() => ({ data: [] })),
-        ])
+      const [
+        assessmentHistoryRes,
+        conversationsRes,
+        appointmentsRes,
+        cbtHistoryRes,
+        meditationHistoryRes,
+        recommendationsRes,
+      ] = await Promise.allSettled([
+        assessmentApi.getHistory({ page: 0, size: 5 }),
+        request.get<unknown, { data: Array<{ id: number }> }>(
+          '/dialogue/conversations'
+        ),
+        counselorApi.getUserAppointments(),
+        interventionApi.getCbtHistory({ page: 0, size: 1 }),
+        interventionApi.getMeditationHistory({ page: 0, size: 1 }),
+        request.get<unknown, { data: RecommendedContent[] }>(
+          '/dashboard/recommendations',
+          {
+            params: { limit: 6 },
+          }
+        ),
+      ])
 
-      // 处理统计数据
-      if (statsRes.status === 'fulfilled' && statsRes.value.data) {
-        setStats(statsRes.value.data)
-      }
+      const assessmentPage =
+        assessmentHistoryRes.status === 'fulfilled'
+          ? (assessmentHistoryRes.value.data as any) || null
+          : null
+      const conversations =
+        conversationsRes.status === 'fulfilled'
+          ? conversationsRes.value.data || []
+          : []
+      const rawAppointments =
+        appointmentsRes.status === 'fulfilled'
+          ? appointmentsRes.value.data || []
+          : []
+      const cbtPage =
+        cbtHistoryRes.status === 'fulfilled' ? cbtHistoryRes.value.data : null
+      const meditationPage =
+        meditationHistoryRes.status === 'fulfilled'
+          ? meditationHistoryRes.value.data
+          : null
+      const recommendedContent =
+        recommendationsRes.status === 'fulfilled'
+          ? recommendationsRes.value.data || []
+          : []
 
-      // 处理评估历史
-      if (assessmentsRes.status === 'fulfilled' && assessmentsRes.value.data) {
-        setRecentAssessments(assessmentsRes.value.data.records || [])
-      }
+      const appointments: AppointmentDTO[] = (rawAppointments as any[]).map(
+        normalizeAppointment
+      )
+      const recentAssessmentRecords = (assessmentPage?.records ||
+        []) as AssessmentResult[]
 
-      // 处理推荐内容
-      if (
-        recommendationsRes.status === 'fulfilled' &&
-        recommendationsRes.value.data
-      ) {
-        setRecommendations(recommendationsRes.value.data)
-      }
-    } catch (error) {
-      console.error('获取仪表盘数据失败:', error)
+      setStats({
+        assessmentCount: Number(assessmentPage?.total || 0),
+        dialogueCount: Array.isArray(conversations) ? conversations.length : 0,
+        appointmentCount: appointments.length,
+        interventionTaskCount:
+          Number(cbtPage?.total || 0) + Number(meditationPage?.total || 0),
+      })
+      setRecentAssessments(recentAssessmentRecords)
+      setRecommendations(
+        Array.isArray(recommendedContent) ? recommendedContent : []
+      )
     } finally {
       setLoading(false)
     }
   }
 
-  // 获取推荐内容图标
   const getRecommendationIcon = (type: RecommendedContent['type']) => {
     switch (type) {
       case 'article':
@@ -113,7 +161,6 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-container">
-      {/* 用户欢迎区域 */}
       <Card className="welcome-card mb-6">
         <Space size="large" align="center">
           <Avatar size={64} icon={<UserOutlined />} />
@@ -122,13 +169,12 @@ export default function Dashboard() {
               {getGreeting()}，{user?.username || '用户'}
             </Title>
             <Text type="secondary">
-              欢迎回到心理健康平台，祝您今天心情愉快！
+              欢迎回到心理健康平台，愿你今天也能稳稳地照顾好自己。
             </Text>
           </div>
         </Space>
       </Card>
 
-      {/* 统计卡片 */}
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} lg={6}>
           <Card hoverable>
@@ -163,9 +209,9 @@ export default function Dashboard() {
         <Col xs={24} sm={12} lg={6}>
           <Card hoverable>
             <Statistic
-              title="完成任务"
+              title="完成干预"
               value={stats?.interventionTaskCount || 0}
-              suffix="个"
+              suffix="项"
               prefix={<BookOutlined style={{ color: '#722ed1' }} />}
             />
           </Card>
@@ -173,12 +219,14 @@ export default function Dashboard() {
       </Row>
 
       <Row gutter={[16, 16]}>
-        {/* 最近评估列表 */}
         <Col xs={24} lg={12}>
           <Card
             title="最近评估"
             extra={
-              <Button type="link" onClick={() => navigate('/assessment')}>
+              <Button
+                type="link"
+                onClick={() => navigate('/assessment/history')}
+              >
                 查看全部 <RightOutlined />
               </Button>
             }
@@ -204,7 +252,7 @@ export default function Dashboard() {
                     <List.Item.Meta
                       title={item.scaleName}
                       description={
-                        <Space>
+                        <Space wrap>
                           <Text>得分: {item.totalScore}</Text>
                           <Text type="secondary">|</Text>
                           <Text>等级: {item.severity}</Text>
@@ -224,7 +272,6 @@ export default function Dashboard() {
           </Card>
         </Col>
 
-        {/* 快捷操作区域 */}
         <Col xs={24} lg={12}>
           <Card title="快捷操作">
             <Space direction="vertical" size="middle" style={{ width: '100%' }}>
@@ -258,8 +305,7 @@ export default function Dashboard() {
         </Col>
       </Row>
 
-      {/* 推荐内容区域 */}
-      <Card title="为您推荐" className="mt-6">
+      <Card title="为你推荐" className="mt-6">
         {recommendations.length > 0 ? (
           <Row gutter={[16, 16]}>
             {recommendations.map(item => (
@@ -290,17 +336,9 @@ export default function Dashboard() {
                     )
                   }
                   onClick={() => {
-                    // 增加浏览次数
-                    request
-                      .post(`/dashboard/recommendations/${item.id}/view`)
-                      .catch(err => {
-                        console.error('增加浏览次数失败:', err)
-                      })
-
                     if (item.url) {
                       window.open(item.url, '_blank')
                     } else {
-                      // 如果没有URL，跳转到文章详情页
                       navigate(`/content/${item.id}`)
                     }
                   }}
