@@ -10,6 +10,20 @@ export enum NotificationType {
   DIALOGUE = 'DIALOGUE',
   INTERVENTION = 'INTERVENTION',
   REMINDER = 'REMINDER',
+  USER_REGISTERED = 'USER_REGISTERED',
+  USER_LOGIN = 'USER_LOGIN',
+  USER_LOGOUT = 'USER_LOGOUT',
+  PASSWORD_CHANGED = 'PASSWORD_CHANGED',
+  PASSWORD_RESET = 'PASSWORD_RESET',
+  APPLICATION_SUBMITTED = 'APPLICATION_SUBMITTED',
+  APPLICATION_APPROVED = 'APPLICATION_APPROVED',
+  APPLICATION_REJECTED = 'APPLICATION_REJECTED',
+  COUNSELOR_STATUS_CHANGED = 'COUNSELOR_STATUS_CHANGED',
+  APPOINTMENT_CREATED = 'APPOINTMENT_CREATED',
+  APPOINTMENT_CONFIRMED = 'APPOINTMENT_CONFIRMED',
+  APPOINTMENT_CANCELLED = 'APPOINTMENT_CANCELLED',
+  APPOINTMENT_COMPLETED = 'APPOINTMENT_COMPLETED',
+  APPOINTMENT_FEEDBACK = 'APPOINTMENT_FEEDBACK',
 }
 
 export enum NotificationStatus {
@@ -45,7 +59,7 @@ export interface UpdatePreferencesRequest {
 
 export interface Notification {
   id: number
-  type: NotificationType
+  type: NotificationType | string
   title: string
   content: string
   status: NotificationStatus
@@ -55,16 +69,35 @@ export interface Notification {
   readAt?: string
 }
 
+const normalizeDateTime = (value: unknown): string => {
+  if (typeof value === 'string') {
+    return value
+  }
+  if (Array.isArray(value) && value.length >= 6) {
+    const year = Number(value[0])
+    const month = Number(value[1])
+    const day = Number(value[2])
+    const hour = Number(value[3])
+    const minute = Number(value[4])
+    const second = Number(value[5])
+    const nano = value.length >= 7 ? Number(value[6]) : 0
+    const ms = Math.floor(nano / 1_000_000)
+    const dt = new Date(year, month - 1, day, hour, minute, second, ms)
+    return dt.toISOString()
+  }
+  return new Date().toISOString()
+}
+
 export interface NotificationPreferences {
-  id: number
+  id?: number
   userId: number
   channels: NotificationChannel[]
   types: NotificationType[]
   quietHoursStart?: string
   quietHoursEnd?: string
   enableQuietHours: boolean
-  createdAt: string
-  updatedAt: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface NotificationStats {
@@ -92,7 +125,23 @@ export const notificationApi = {
       unreadCount: number
     }>
   > => {
-    return request.get('/notifications', { params })
+    return request.get('/notifications', { params }).then((res: any) => {
+      const data = res?.data || {}
+      const items = Array.isArray(data.items)
+        ? data.items.map((item: any) => ({
+            ...item,
+            createdAt: normalizeDateTime(item.createdAt),
+            readAt: item.readAt ? normalizeDateTime(item.readAt) : undefined,
+          }))
+        : []
+      return {
+        ...res,
+        data: {
+          ...data,
+          items,
+        },
+      }
+    })
   },
 
   /**
@@ -160,7 +209,36 @@ export const notificationApi = {
    * @returns 偏好设置
    */
   getPreferences: (): Promise<ApiResponse<NotificationPreferences>> => {
-    return request.get('/notifications/preferences')
+    return request.get('/notifications/preferences').then((res: any) => {
+      const raw = res.data || {}
+      const channels: NotificationChannel[] = []
+      if (raw.enableInApp) channels.push(NotificationChannel.IN_APP)
+      if (raw.enableEmail) channels.push(NotificationChannel.EMAIL)
+      if (raw.enableSms) channels.push(NotificationChannel.SMS)
+
+      const types: NotificationType[] = [NotificationType.SYSTEM]
+      if (raw.enableAppointmentReminder) {
+        types.push(NotificationType.APPOINTMENT, NotificationType.REMINDER)
+      }
+      if (raw.enableTaskReminder) {
+        types.push(NotificationType.INTERVENTION, NotificationType.REMINDER)
+      }
+      if (raw.enableAssessmentNotification) {
+        types.push(NotificationType.ASSESSMENT)
+      }
+
+      return {
+        ...res,
+        data: {
+          userId: Number(raw.userId ?? 0),
+          channels,
+          types,
+          enableQuietHours: false,
+          quietHoursStart: undefined,
+          quietHoursEnd: undefined,
+        } as NotificationPreferences,
+      }
+    })
   },
 
   /**
@@ -171,7 +249,25 @@ export const notificationApi = {
   updatePreferences: (
     data: UpdatePreferencesRequest
   ): Promise<ApiResponse<NotificationPreferences>> => {
-    return request.put('/notifications/preferences', data)
+    const channels = data.channels || []
+    const types = data.types || []
+
+    const payload = {
+      enableInApp: channels.includes(NotificationChannel.IN_APP),
+      enableEmail: channels.includes(NotificationChannel.EMAIL),
+      enableSms: channels.includes(NotificationChannel.SMS),
+      enableAppointmentReminder:
+        types.includes(NotificationType.APPOINTMENT) ||
+        types.includes(NotificationType.REMINDER),
+      enableTaskReminder:
+        types.includes(NotificationType.INTERVENTION) ||
+        types.includes(NotificationType.REMINDER),
+      enableAssessmentNotification: types.includes(NotificationType.ASSESSMENT),
+    }
+
+    return request.put('/notifications/preferences', payload).then(() => {
+      return notificationApi.getPreferences()
+    })
   },
 
   /**

@@ -33,16 +33,46 @@ const { Title, Text, Paragraph } = Typography
 const { confirm } = Modal
 
 // 通知类型映射
-const notificationTypeMap: Record<
-  NotificationType,
-  { label: string; color: string }
-> = {
+const notificationTypeMap: Record<string, { label: string; color: string }> = {
   [NotificationType.SYSTEM]: { label: '系统', color: 'blue' },
   [NotificationType.ASSESSMENT]: { label: '评估', color: 'green' },
   [NotificationType.APPOINTMENT]: { label: '预约', color: 'orange' },
   [NotificationType.DIALOGUE]: { label: '对话', color: 'purple' },
   [NotificationType.INTERVENTION]: { label: '干预', color: 'cyan' },
   [NotificationType.REMINDER]: { label: '提醒', color: 'red' },
+  [NotificationType.USER_REGISTERED]: { label: '账户', color: 'blue' },
+  [NotificationType.USER_LOGIN]: { label: '账户', color: 'blue' },
+  [NotificationType.USER_LOGOUT]: { label: '账户', color: 'default' },
+  [NotificationType.PASSWORD_CHANGED]: { label: '安全', color: 'volcano' },
+  [NotificationType.PASSWORD_RESET]: { label: '安全', color: 'volcano' },
+  [NotificationType.APPLICATION_SUBMITTED]: { label: '申请', color: 'gold' },
+  [NotificationType.APPLICATION_APPROVED]: { label: '申请', color: 'green' },
+  [NotificationType.APPLICATION_REJECTED]: { label: '申请', color: 'red' },
+  [NotificationType.COUNSELOR_STATUS_CHANGED]: {
+    label: '咨询师',
+    color: 'purple',
+  },
+  [NotificationType.APPOINTMENT_CREATED]: { label: '预约', color: 'cyan' },
+  [NotificationType.APPOINTMENT_CONFIRMED]: { label: '预约', color: 'green' },
+  [NotificationType.APPOINTMENT_CANCELLED]: { label: '预约', color: 'red' },
+  [NotificationType.APPOINTMENT_COMPLETED]: { label: '预约', color: 'blue' },
+  [NotificationType.APPOINTMENT_FEEDBACK]: { label: '预约', color: 'gold' },
+}
+
+const getNotificationTypeInfo = (type: string) => {
+  if (notificationTypeMap[type]) {
+    return notificationTypeMap[type]
+  }
+  if (type.startsWith('APPOINTMENT_')) {
+    return { label: '预约', color: 'cyan' }
+  }
+  if (type.startsWith('APPLICATION_')) {
+    return { label: '申请', color: 'gold' }
+  }
+  if (type.startsWith('USER_')) {
+    return { label: '账户', color: 'blue' }
+  }
+  return { label: type || '通知', color: 'default' }
 }
 
 export default function Notifications() {
@@ -158,7 +188,7 @@ export default function Notifications() {
             dataSource={notifications}
             renderItem={item => {
               const isUnread = item.status === NotificationStatus.UNREAD
-              const typeInfo = notificationTypeMap[item.type]
+              const typeInfo = getNotificationTypeInfo(String(item.type))
 
               return (
                 <List.Item
@@ -232,8 +262,16 @@ export default function Notifications() {
             <BellOutlined />
             <span>通知详情</span>
             {selectedNotification && (
-              <Tag color={notificationTypeMap[selectedNotification.type].color}>
-                {notificationTypeMap[selectedNotification.type].label}
+              <Tag
+                color={
+                  getNotificationTypeInfo(String(selectedNotification.type))
+                    .color
+                }
+              >
+                {
+                  getNotificationTypeInfo(String(selectedNotification.type))
+                    .label
+                }
               </Tag>
             )}
           </Space>

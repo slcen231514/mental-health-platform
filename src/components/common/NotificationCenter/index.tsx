@@ -57,7 +57,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   }, [visible, fetchNotifications])
 
   // 获取通知类型标签颜色
-  const getTypeColor = (type: NotificationType) => {
+  const getTypeColor = (type: NotificationType | string) => {
     switch (type) {
       case NotificationType.SYSTEM:
         return 'blue'
@@ -77,7 +77,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   }
 
   // 获取通知类型显示名称
-  const getTypeLabel = (type: NotificationType) => {
+  const getTypeLabel = (type: NotificationType | string) => {
     switch (type) {
       case NotificationType.SYSTEM:
         return '系统'
