@@ -19,7 +19,6 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
 } from '@ant-design/icons'
-import { useAuthStore } from '@/store'
 import { formRules, handleError, showSuccess } from '@/utils'
 import { authApi, type RegisterRequest } from '@/api/auth'
 
@@ -46,7 +45,6 @@ const Register: React.FC = () => {
     useState<PasswordStrength>('weak')
   const [passwordScore, setPasswordScore] = useState(0)
   const navigate = useNavigate()
-  const { setAuth } = useAuthStore()
 
   /**
    * 计算密码强度
@@ -134,7 +132,7 @@ const Register: React.FC = () => {
 
     try {
       // 调用注册 API
-      const response = await authApi.register({
+      await authApi.register({
         username: values.username,
         email: values.email,
         password: values.password,
@@ -142,13 +140,11 @@ const Register: React.FC = () => {
       })
 
       // 注册成功，自动登录
-      const { user, accessToken, refreshToken } = response.data
-      setAuth(user, accessToken, refreshToken)
 
       showSuccess('注册成功，欢迎加入！')
 
       // 跳转到仪表盘
-      navigate('/', { replace: true })
+      navigate('/login', { replace: true })
     } catch (error: any) {
       // 错误处理
       handleError(error, {

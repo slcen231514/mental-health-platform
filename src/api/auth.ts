@@ -70,9 +70,9 @@ export const authApi = {
    * @param data 注册信息
    * @returns 注册结果
    */
-  register: (data: RegisterRequest): Promise<ApiResponse<TokenResponse>> => {
+  register: (data: RegisterRequest): Promise<ApiResponse<User>> => {
     if (MOCK_ENABLED) {
-      return mockRegister(data) as Promise<ApiResponse<TokenResponse>>
+      return mockRegister(data) as Promise<ApiResponse<User>>
     }
     return request.post('/users/register', data)
   },

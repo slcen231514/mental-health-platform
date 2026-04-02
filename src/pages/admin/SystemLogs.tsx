@@ -34,7 +34,7 @@ const SystemLogs: React.FC = () => {
   const [operator, setOperator] = useState<string | undefined>(undefined)
 
   useEffect(() => {
-    fetchLogs()
+    void fetchLogs()
   }, [currentPage, pageSize, operationType, dateRange, operator])
 
   const fetchLogs = async () => {
@@ -198,7 +198,7 @@ const SystemLogs: React.FC = () => {
             total={total}
             showSizeChanger
             showQuickJumper
-            showTotal={total => `共 ${total} 条`}
+            showTotal={count => `共 ${count} 条`}
             onChange={(page, size) => {
               setCurrentPage(page)
               setPageSize(size)
